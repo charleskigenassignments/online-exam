@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Secure Exam System</title>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Setup */
+        #setup { display: flex; justify-content: center; align-items: center; flex: 1; z-index: 10; }
+        .box { background: #161b22; padding: 35px; border-radius: 12px; border: 1px solid #30363d; max-width: 450px; width: 100%; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; outline: none; }
+        .btn { background: #238636; color: white; border: none; padding: 14px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
+        .btn:disabled { background: #21262d; color: #8b949e; cursor: not-allowed; }
+
+        /* HUD */
+        #statusBar { display: none; background: #161b22; padding: 12px 25px; border-bottom: 1px solid #30363d; }
+        .status-flex { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        #examTimer { font-family: monospace; font-size: 18px; color: #58a6ff; }
+        
+        /* Frame */
+        iframe { width: 100%; flex: 1; border: none; display: none; background: white; }
+
+        /* Overlays */
+        #overlay, #countdownOverlay, #connOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; justify-content: center; align-items: center; flex-direction: column; text-align: center; }
+        #overlay { background: #8b0000; }
+        #countdownOverlay { background: rgba(0,0,0,0.95); color: #f85149; }
+        #connOverlay { background: rgba(0,0,0,0.9); color: #e3b341; }
+        
+        .timer-warning { color: #f85149 !important; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<div id="statusBar">
+    <div class="status-flex">
+        <span id="strikeText" style="color: #238636;">● SECURITY ACTIVE</span>
+        <span id="examTimer">00:00:00</span>
+    </div>
+</div>
+
+<div id="setup">
+    <div class="box">
+        <h2>Exam Verification</h2>
+        <input type="text" id="userName" placeholder="Full Name" oninput="validateAll()">
+        <input type="text" id="regNo" placeholder="Registration Number" oninput="validateAll()">
+        <div style="display: flex; gap: 8px;">
+            <input type="email" id="userEmail" placeholder="Gmail Address">
+            <button onclick="sendOTP()" id="otpBtn" style="height:42px; width:100px; margin-top:8px;">Get Code</button>
+        </div>
+        <input type="text" id="otpInput" placeholder="4-Digit OTP" style="display:none; text-align: center;" oninput="validateAll()">
+        <button id="startBtn" class="btn" disabled onclick="syncAndStart()">SYNC & START</button>
+    </div>
+</div>
+
+<div id="countdownOverlay">
+    <h1 id="countDisplay" style="font-size: 100px;">10</h1>
+    <h2>RETURN TO EXAM IMMEDIATELY</h2>
+</div>
+
+<div id="connOverlay">
+    <h1>CONNECTION LOST</h1>
+    <p>Please check your internet. Exam will resume once reconnected.</p>
+</div>
+
+<iframe id="examFrame" src="about:blank"></iframe>
+
+<div id="overlay">
+    <h1>SESSION LOCKED</h1>
+    <p id="failReason" style="margin: 15px 0;">Violation detected.</p>
+    <div style="background: white; color: black; padding: 25px; border-radius: 8px; width: 350px;">
+        <input type="text" id="reentryKey" placeholder="Enter Reset Key" style="border:1px solid #ccc; background:#eee; color:#000;">
+        <button onclick="attemptReentry()" class="btn">UNLOCK EXAM</button>
+    </div>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYxD9zAh4mtyQyoPKnlzx9fvzFEqKPmBqpq5oliET4Luk5PSoveU_jHoavVKKDeTFj0g/exec"; 
+    const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfimbqiEg3fuQGit-6ZEcIbmdrQOmCR_-KSFVnLMKWvVrY7Vg/viewform?usp=header";
+
+    let state = {
+        violations: 0, active: false, isArmed: false,
+        leaveTime: null, correctOTP: null, timeLeft: 0,
+        serverResetKey: null, autoTimer: null, hardLimit: null, visualTick: null
+    };
+
+    // 1. Block Screen Capture
+    document.addEventListener('keydown', (e) => {
+        if (e.key === "PrintScreen" || (e.ctrlKey && ['p','s','u'].includes(e.key.toLowerCase()))) {
+            e.preventDefault();
+            alert("Security Violation: Screen capture disabled.");
+        }
+    });
+
+    // 2. Internet Heartbeat
+    setInterval(async () => {
+        if (!state.active) return;
+        try {
+            const res = await fetch(`${SCRIPT_URL}?action=ping`);
+            if (res.ok) document.getElementById('connOverlay').style.display = 'none';
+        } catch (e) {
+            document.getElementById('connOverlay').style.display = 'flex';
+        }
+    }, 5000);
+
+    function validateAll() {
+        const name = document.getElementById('userName').value.trim();
+        const reg = document.getElementById('regNo').value.trim();
+        const otp = document.getElementById('otpInput').value.trim();
+        document.getElementById('startBtn').disabled = !(name.length > 2 && reg.length > 1 && otp === state.correctOTP);
+    }
+
+    function sendOTP() {
+        const email = document.getElementById('userEmail').value;
+        document.getElementById('otpBtn').innerText = "...";
+        fetch(`${SCRIPT_URL}?action=sendOTP&email=${encodeURIComponent(email)}`)
+            .then(res => res.text()).then(code => {
+                state.correctOTP = code.trim();
+                document.getElementById('otpInput').style.display = "block";
+                document.getElementById('otpBtn').innerText = "Sent";
+            });
+    }
+
+    async function syncAndStart() {
+        const res = await fetch(`${SCRIPT_URL}?action=getSettings`);
+        const data = await res.json();
+        state.timeLeft = data.duration * 60;
+        state.serverResetKey = data.resetKey;
+        
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('statusBar').style.display = 'block';
+        document.getElementById('examFrame').style.display = 'block';
+        document.getElementById('examFrame').src = FORM_URL;
+        
+        state.active = true;
+        setInterval(tick, 1000);
+        setTimeout(() => { state.isArmed = true; }, 3000);
+        
+        window.addEventListener('blur', handleLeave);
+        window.addEventListener('focus', handleReturn);
+    }
+
+    function tick() {
+        if (!state.active || state.timeLeft <= 0) return;
+        state.timeLeft--;
+        const h = Math.floor(state.timeLeft / 3600);
+        const m = Math.floor((state.timeLeft % 3600) / 60);
+        const s = state.timeLeft % 60;
+        const timerEl = document.getElementById('examTimer');
+        timerEl.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        if (state.timeLeft < 300) timerEl.classList.add('timer-warning');
+        if (state.timeLeft === 0) forceLock("Time Expired");
+    }
+
+    function handleLeave() {
+        // FIX: Delay check to see if user clicked inside iframe
+        setTimeout(() => {
+            if (document.activeElement === document.getElementById('examFrame')) return;
+            if (!state.active || !state.isArmed || state.leaveTime) return;
+
+            state.leaveTime = Date.now();
+            let limit = (state.violations === 0) ? 10 : 5;
+            document.getElementById('countdownOverlay').style.display = 'flex';
+            document.getElementById('countDisplay').innerText = limit;
+
+            let c = limit;
+            state.visualTick = setInterval(() => {
+                c--;
+                document.getElementById('countDisplay').innerText = c > 0 ? c : 0;
+                if (c <= 0) clearInterval(state.visualTick);
+            }, 1000);
+
+            state.autoTimer = setTimeout(() => { processViolation("Tab Switch"); }, limit * 1000 + 500);
+            if (state.violations === 0) {
+                state.hardLimit = setTimeout(() => { forceLock("Long Absence"); }, 60000);
+            }
+        }, 200);
+    }
+
+    function handleReturn() {
+        if (!state.active || !state.leaveTime) return;
+        clearTimeout(state.autoTimer);
+        clearTimeout(state.hardLimit);
+        clearInterval(state.visualTick);
+        document.getElementById('countdownOverlay').style.display = 'none';
+        state.leaveTime = null;
+    }
+
+    function processViolation(reason) {
+        state.violations++;
+        state.leaveTime = null;
+        document.getElementById('countdownOverlay').style.display = 'none';
+        if (state.violations === 1) {
+            alert("STRIKE 1: Warning issued.");
+            document.getElementById('strikeText').innerText = "● SECURITY: 1 STRIKE";
+            document.getElementById('strikeText').style.color = "#e3b341";
+        } else { forceLock(reason); }
+    }
+
+    function forceLock(reason) {
+        state.active = false;
+        document.getElementById('examFrame').style.display = 'none';
+        document.getElementById('overlay').style.display = 'flex';
+        document.getElementById('failReason').innerText = reason;
+        const log = `${reason} at ${new Date().toLocaleTimeString()}`;
+        fetch(`${SCRIPT_URL}?name=${encodeURIComponent(document.getElementById('userName').value)}&reg=${encodeURIComponent(document.getElementById('regNo').value)}&email=${encodeURIComponent(document.getElementById('userEmail').value)}&violation=${encodeURIComponent(log)}`);
+    }
+
+    function attemptReentry() {
+        if (document.getElementById('reentryKey').value === state.serverResetKey.toString()) {
+            state.active = true; state.violations = 0;
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('examFrame').style.display = 'block';
+            document.getElementById('strikeText').innerText = "● SECURITY ACTIVE (RESET)";
+            document.getElementById('strikeText').style.color = "#238636";
+        } else { alert("Wrong Reset Key."); }
+    }
+</script>
+</body>
+</html>
