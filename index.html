@@ -154,50 +154,82 @@
         if (state.timeLeft === 0) forceLock("Time Expired");
     }
 
-    function handleLeave() {
-        // FIX: Delay check to see if user clicked inside iframe
-        setTimeout(() => {
-            if (document.activeElement === document.getElementById('examFrame')) return;
-            if (!state.active || !state.isArmed || state.leaveTime) return;
+function handleLeave() {
+    // 1. Check if focus actually moved to the exam iframe (False Violation Fix)
+    setTimeout(() => {
+        if (document.activeElement === document.getElementById('examFrame')) return;
+        if (!state.active || !state.isArmed || state.leaveTime) return;
 
-            state.leaveTime = Date.now();
-            let limit = (state.violations === 0) ? 10 : 5;
-            document.getElementById('countdownOverlay').style.display = 'flex';
-            document.getElementById('countDisplay').innerText = limit;
+        state.leaveTime = Date.now();
+        
+        // Logic: Strike 0 (No violations) = 10s | Strike 1 (Already warned) = 5s
+        let limit = (state.violations === 0) ? 10 : 5;
+        
+        document.getElementById('countdownOverlay').style.display = 'flex';
+        document.getElementById('countDisplay').innerText = limit;
 
-            let c = limit;
-            state.visualTick = setInterval(() => {
-                c--;
-                document.getElementById('countDisplay').innerText = c > 0 ? c : 0;
-                if (c <= 0) clearInterval(state.visualTick);
-            }, 1000);
+        let c = limit;
+        // Clear any old interval just in case
+        if (state.visualTick) clearInterval(state.visualTick);
+        
+        state.visualTick = setInterval(() => {
+            c--;
+            document.getElementById('countDisplay').innerText = c > 0 ? c : 0;
+            if (c <= 0) clearInterval(state.visualTick);
+        }, 1000);
 
-            state.autoTimer = setTimeout(() => { processViolation("Tab Switch"); }, limit * 1000 + 500);
-            if (state.violations === 0) {
-                state.hardLimit = setTimeout(() => { forceLock("Long Absence"); }, 60000);
-            }
-        }, 200);
+        // Clear any old autoTimer before setting a new one
+        if (state.autoTimer) clearTimeout(state.autoTimer);
+        
+        state.autoTimer = setTimeout(() => { 
+            processViolation("Tab Switch Threshold Exceeded"); 
+        }, limit * 1000 + 500);
+
+        // Hard limit for 60s absence only applies on the first warning phase
+        if (state.violations === 0) {
+            if (state.hardLimit) clearTimeout(state.hardLimit);
+            state.hardLimit = setTimeout(() => { 
+                forceLock("Long Absence (>60s)"); 
+            }, 60000);
+        }
+    }, 250);
+}
+
+function handleReturn() {
+    if (!state.active || !state.leaveTime) return;
+    
+    // Stop all countdowns immediately upon return
+    clearTimeout(state.autoTimer);
+    clearTimeout(state.hardLimit);
+    clearInterval(state.visualTick);
+    
+    document.getElementById('countdownOverlay').style.display = 'none';
+    state.leaveTime = null;
+    state.autoTimer = null;
+    state.hardLimit = null;
+}
+
+function processViolation(reason) {
+    // Immediately stop everything to prevent logic loops
+    clearInterval(state.visualTick);
+    clearTimeout(state.autoTimer);
+    clearTimeout(state.hardLimit);
+    state.leaveTime = null;
+    
+    document.getElementById('countdownOverlay').style.display = 'none';
+    
+    state.violations++; // Increment strike count
+
+    if (state.violations === 1) {
+        // Strike 1: Warning
+        document.getElementById('strikeText').innerText = "● SECURITY: 1 STRIKE (WARNING)";
+        document.getElementById('strikeText').style.color = "#e3b341";
+        alert("⚠️ WARNING: STRIKE 1 issued.\nYou were away too long. One more exit for more than 5 seconds will PERMANENTLY LOCK your exam.");
+    } else {
+        // Strike 2 or more: Permanent Lock
+        forceLock(reason);
     }
-
-    function handleReturn() {
-        if (!state.active || !state.leaveTime) return;
-        clearTimeout(state.autoTimer);
-        clearTimeout(state.hardLimit);
-        clearInterval(state.visualTick);
-        document.getElementById('countdownOverlay').style.display = 'none';
-        state.leaveTime = null;
-    }
-
-    function processViolation(reason) {
-        state.violations++;
-        state.leaveTime = null;
-        document.getElementById('countdownOverlay').style.display = 'none';
-        if (state.violations === 1) {
-            alert("STRIKE 1: Warning issued.");
-            document.getElementById('strikeText').innerText = "● SECURITY: 1 STRIKE";
-            document.getElementById('strikeText').style.color = "#e3b341";
-        } else { forceLock(reason); }
-    }
+}
 
     function forceLock(reason) {
         state.active = false;
@@ -219,4 +251,5 @@
     }
 </script>
 </body>
+
 </html>
