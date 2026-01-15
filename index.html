@@ -1,216 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Secure Exam Portal</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Secure Mobile Exam Portal</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
-        body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
         /* Setup Container */
-        #setup { display: flex; justify-content: center; align-items: center; flex: 1; z-index: 10; }
-        .box { background: #161b22; padding: 35px; border-radius: 12px; border: 1px solid #30363d; max-width: 450px; width: 100%; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; outline: none; }
-        .btn { background: #238636; color: white; border: none; padding: 14px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
-        .btn:disabled { background: #21262d; color: #8b949e; cursor: not-allowed; }
+        #setup { display: flex; justify-content: center; align-items: center; flex: 1; padding: 20px; z-index: 100; }
+        .box { background: #161b22; padding: 25px; border-radius: 12px; border: 1px solid #30363d; width: 100%; max-width: 400px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; font-size: 16px; }
+        .btn { background: #238636; color: white; border: none; padding: 14px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        .btn:disabled { background: #21262d; color: #8b949e; }
 
-        /* HUD */
-        #statusBar { display: none; background: #161b22; padding: 12px 25px; border-bottom: 1px solid #30363d; }
-        .status-flex { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
-        #examTimer { font-family: monospace; font-size: 18px; color: #58a6ff; }
+        /* MOBILE FIX: Bottom Status Bar (Always Visible) */
+        #statusBar { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: #161b22; padding: 12px 20px; border-top: 1px solid #30363d; z-index: 9999; }
+        .status-flex { display: flex; justify-content: space-between; align-items: center; }
+        #examTimer { font-family: monospace; font-size: 20px; color: #58a6ff; font-weight: bold; }
         
         /* Elements */
-        iframe { width: 100%; flex: 1; border: none; display: none; background: white; }
-        #overlay, #countdownOverlay, #connOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10000; justify-content: center; align-items: center; flex-direction: column; text-align: center; }
-        #overlay { background: #8b0000; }
+        #iframeContainer { flex: 1; display: none; width: 100%; height: calc(100vh - 55px); background: white; -webkit-overflow-scrolling: touch; }
+        iframe { width: 100%; height: 100%; border: none; }
+        
+        #overlay, #countdownOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10001; justify-content: center; align-items: center; flex-direction: column; text-align: center; padding: 30px; }
+        #overlay { background: #8b0000; color: white; }
         #countdownOverlay { background: rgba(0,0,0,0.95); color: #f85149; }
-        #connOverlay { background: rgba(0,0,0,0.9); color: #e3b341; }
-        .timer-warning { color: #f85149 !important; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.5; } }
+        .timer-warning { color: #f85149 !important; }
     </style>
 </head>
 <body oncontextmenu="return false;">
 
+<div id="setup">
+    <div class="box">
+        <h2 style="margin-bottom:15px;">Exam Verification</h2>
+        <input type="text" id="uName" placeholder="Full Name">
+        <input type="text" id="uReg" placeholder="Registration Number">
+        <div style="display: flex; gap: 5px;">
+            <input type="email" id="uEmail" placeholder="Gmail">
+            <button onclick="sendOTP()" id="otpBtn" style="width:90px; height:42px; margin-top:8px; font-size:12px;">Get OTP</button>
+        </div>
+        <input type="text" id="otpIn" placeholder="4-Digit OTP" style="display:none; text-align:center;">
+        <button id="startBtn" class="btn" onclick="syncAndStart()">START EXAM</button>
+    </div>
+</div>
+
+<div id="countdownOverlay"><h1 id="countDisp" style="font-size: 80px;">10</h1><h2>RETURN IMMEDIATELY</h2></div>
+
+<div id="iframeContainer"><iframe id="examFrame" src=""></iframe></div>
+
 <div id="statusBar">
     <div class="status-flex">
-        <span id="strikeText" style="color: #238636;">● MONITORING ACTIVE</span>
+        <span id="strikeText" style="color:#238636; font-size:12px;">● PROCTORING ACTIVE</span>
         <span id="examTimer">00:00:00</span>
     </div>
 </div>
 
-<div id="setup">
-    <div class="box">
-        <h2>Identity Verification</h2>
-        <input type="text" id="userName" placeholder="Full Name" oninput="validateAll()">
-        <input type="text" id="regNo" placeholder="Registration Number" oninput="validateAll()">
-        <div style="display: flex; gap: 8px;">
-            <input type="email" id="userEmail" placeholder="Gmail Address">
-            <button onclick="sendOTP()" id="otpBtn" style="height:42px; width:100px; margin-top:8px;">Get OTP</button>
-        </div>
-        <input type="text" id="otpInput" placeholder="4-Digit OTP" style="display:none; text-align: center;" oninput="validateAll()">
-        <button id="startBtn" class="btn" disabled onclick="syncAndStart()">Proceed to CAT</button>
-    </div>
-</div>
-
-<div id="countdownOverlay"><h1 id="countDisplay" style="font-size: 100px;">10</h1><h2>RETURN NOW</h2></div>
-<div id="connOverlay"><h1>CONNECTION LOST</h1><p>Checking internet...</p></div>
-<iframe id="examFrame" src="about:blank"></iframe>
-
 <div id="overlay">
     <h1>SESSION LOCKED</h1>
-    <p id="failReason" style="margin: 15px 0;">Violation detected.</p>
-    <div style="background: white; color: black; padding: 25px; border-radius: 8px; width: 350px;">
-        <input type="text" id="reentryKey" placeholder="Enter Reset Key" style="border:1px solid #ccc; background:#eee; color:#000;">
-        <button onclick="attemptReentry()" class="btn">UNLOCK EXAM</button>
-    </div>
+    <p id="lockReason" style="margin: 20px 0;">Security policy violation.</p>
+    <input type="text" id="reKey" placeholder="Instructor Reset Key" style="background:white; color:black; max-width:250px;">
+    <button onclick="unlock()" class="btn" style="max-width:250px;">RESUME EXAM</button>
 </div>
 
 <script>
-     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYxD9zAh4mtyQyoPKnlzx9fvzFEqKPmBqpq5oliET4Luk5PSoveU_jHoavVKKDeTFj0g/exec"; 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYxD9zAh4mtyQyoPKnlzx9fvzFEqKPmBqpq5oliET4Luk5PSoveU_jHoavVKKDeTFj0g/exec"; 
     const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfimbqiEg3fuQGit-6ZEcIbmdrQOmCR_-KSFVnLMKWvVrY7Vg/viewform?usp=header";
 
-    let state = {
-        violations: 0, active: false, isArmed: false,
-        leaveTime: null, correctOTP: null, timeLeft: 0,
-        serverResetKey: null, autoTimer: null, hardLimit: null, visualTick: null
-    };
 
-    // 1. Anti-Screen Capture
-    document.addEventListener('keydown', (e) => {
-        if (e.key === "PrintScreen" || (e.ctrlKey && ['p','s','u'].includes(e.key.toLowerCase()))) {
-            e.preventDefault(); alert("Security: Action Blocked.");
-        }
-    });
-
-    // 2. Heartbeat Monitor
-    setInterval(async () => {
-        if (!state.active) return;
-        try {
-            const res = await fetch(`${SCRIPT_URL}?action=ping`);
-            document.getElementById('connOverlay').style.display = res.ok ? 'none' : 'flex';
-        } catch (e) { document.getElementById('connOverlay').style.display = 'flex'; }
-    }, 5000);
-
-    function validateAll() {
-        const name = document.getElementById('userName').value.trim();
-        const reg = document.getElementById('regNo').value.trim();
-        const otp = document.getElementById('otpInput').value.trim();
-        document.getElementById('startBtn').disabled = !(name.length > 2 && reg.length > 1 && otp === state.correctOTP);
-    }
+    let state = { active: false, violations: 0, timeLeft: 0, leaveTime: null, otp: null, masterKey: null };
 
     function sendOTP() {
-        const email = document.getElementById('userEmail').value;
+        const email = document.getElementById('uEmail').value;
+        if(!email.includes('@')) return alert("Enter valid email");
         document.getElementById('otpBtn').innerText = "...";
         fetch(`${SCRIPT_URL}?action=sendOTP&email=${encodeURIComponent(email)}`)
-            .then(res => res.text()).then(code => {
-                state.correctOTP = code.trim();
-                document.getElementById('otpInput').style.display = "block";
+            .then(r => r.text()).then(code => {
+                state.otp = code.trim();
+                document.getElementById('otpIn').style.display = "block";
                 document.getElementById('otpBtn').innerText = "Sent";
             });
     }
 
     async function syncAndStart() {
+        if (document.getElementById('otpIn').value !== state.otp) return alert("Invalid OTP");
+        
         const res = await fetch(`${SCRIPT_URL}?action=getSettings`);
         const data = await res.json();
         state.timeLeft = data.duration * 60;
-        state.serverResetKey = data.resetKey;
-        
+        state.masterKey = data.resetKey;
+
         // Log Login
-        fetch(`${SCRIPT_URL}?action=login&name=${encodeURIComponent(document.getElementById('userName').value)}&reg=${encodeURIComponent(document.getElementById('regNo').value)}&email=${encodeURIComponent(document.getElementById('userEmail').value)}`);
+        fetch(`${SCRIPT_URL}?action=login&name=${encodeURIComponent(document.getElementById('uName').value)}&reg=${encodeURIComponent(document.getElementById('uReg').value)}&email=${encodeURIComponent(document.getElementById('uEmail').value)}`);
 
         document.getElementById('setup').style.display = 'none';
         document.getElementById('statusBar').style.display = 'block';
-        document.getElementById('examFrame').style.display = 'block';
+        document.getElementById('iframeContainer').style.display = 'block';
         document.getElementById('examFrame').src = FORM_URL;
         
         state.active = true;
-        setInterval(tick, 1000);
-        setTimeout(() => { state.isArmed = true; }, 3000);
-        
-        window.addEventListener('blur', handleLeave);
-        window.addEventListener('focus', handleReturn);
+        setInterval(updateTimer, 1000);
+
+        // ANDROID FIX: Visibility API is better than 'blur' for mobile apps
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) handleLeave(); else handleReturn();
+        });
+        window.onblur = handleLeave;
+        window.onfocus = handleReturn;
     }
 
-    function tick() {
+    function updateTimer() {
         if (!state.active || state.timeLeft <= 0) return;
         state.timeLeft--;
-        const h = Math.floor(state.timeLeft / 3600);
-        const m = Math.floor((state.timeLeft % 3600) / 60);
+        const m = Math.floor(state.timeLeft / 60);
         const s = state.timeLeft % 60;
-        document.getElementById('examTimer').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-        if (state.timeLeft < 300) document.getElementById('examTimer').classList.add('timer-warning');
-        if (state.timeLeft === 0) forceLock("Time Expired");
+        const timerDisp = document.getElementById('examTimer');
+        timerDisp.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        if (state.timeLeft < 300) timerDisp.classList.add('timer-warning');
+        if (state.timeLeft === 0) lockExam("Time Expired");
     }
 
     function handleLeave() {
+        // Delay check to prevent violation when Android keyboard opens
         setTimeout(() => {
-            // Check if user just clicked inside the exam frame
             if (document.activeElement === document.getElementById('examFrame')) return;
-            if (!state.active || !state.isArmed || state.leaveTime) return;
+            if (!state.active || state.leaveTime) return;
 
             state.leaveTime = Date.now();
-            let limit = (state.violations === 0) ? 10 : 5;
+            let limit = state.violations === 0 ? 10 : 5;
             document.getElementById('countdownOverlay').style.display = 'flex';
             
-            let c = limit;
-            if(state.visualTick) clearInterval(state.visualTick);
-            state.visualTick = setInterval(() => {
-                c--;
-                document.getElementById('countDisplay').innerText = c > 0 ? c : 0;
-                if (c <= 0) clearInterval(state.visualTick);
+            let count = limit;
+            state.vTick = setInterval(() => {
+                count--;
+                document.getElementById('countDisp').innerText = count > 0 ? count : 0;
+                if (count <= 0) clearInterval(state.vTick);
             }, 1000);
 
-            if(state.autoTimer) clearTimeout(state.autoTimer);
-            state.autoTimer = setTimeout(() => { processViolation("Tab Exit Threshold"); }, limit * 1000 + 500);
-
-            if (state.violations === 0) {
-                if(state.hardLimit) clearTimeout(state.hardLimit);
-                state.hardLimit = setTimeout(() => { forceLock("Long Absence"); }, 60000);
-            }
-        }, 250);
+            state.vTimer = setTimeout(() => { triggerStrike(); }, limit * 1000 + 500);
+        }, 300);
     }
 
     function handleReturn() {
         if (!state.active || !state.leaveTime) return;
-        clearTimeout(state.autoTimer);
-        clearTimeout(state.hardLimit);
-        clearInterval(state.visualTick);
+        clearInterval(state.vTick);
+        clearTimeout(state.vTimer);
         document.getElementById('countdownOverlay').style.display = 'none';
         state.leaveTime = null;
     }
 
-    function processViolation(reason) {
+    function triggerStrike() {
         state.violations++;
-        handleReturn(); // Cleanup UI
-
+        handleReturn();
         if (state.violations === 1) {
             document.getElementById('strikeText').innerText = "● SECURITY: 1 STRIKE";
             document.getElementById('strikeText').style.color = "#e3b341";
-            alert("⚠️ STRIKE 1: One more exit >5s will lock your session.");
-        } else { forceLock(reason); }
+            alert("⚠️ WARNING: One more tab switch will lock the exam.");
+        } else {
+            lockExam("Multiple Tab Switches");
+        }
     }
 
-    function forceLock(reason) {
+    function lockExam(reason) {
         state.active = false;
-        document.getElementById('examFrame').style.display = 'none';
+        document.getElementById('iframeContainer').style.display = 'none';
+        document.getElementById('statusBar').style.display = 'none';
         document.getElementById('overlay').style.display = 'flex';
-        document.getElementById('failReason').innerText = reason;
-        const log = `${reason} at ${new Date().toLocaleTimeString()}`;
-        fetch(`${SCRIPT_URL}?name=${encodeURIComponent(document.getElementById('userName').value)}&reg=${encodeURIComponent(document.getElementById('regNo').value)}&email=${encodeURIComponent(document.getElementById('userEmail').value)}&violation=${encodeURIComponent(log)}`);
+        document.getElementById('lockReason').innerText = reason;
+        
+        fetch(`${SCRIPT_URL}?name=${encodeURIComponent(document.getElementById('uName').value)}&reg=${encodeURIComponent(document.getElementById('uReg').value)}&email=${encodeURIComponent(document.getElementById('uEmail').value)}&violation=${encodeURIComponent(reason)}`);
     }
 
-    function attemptReentry() {
-        if (document.getElementById('reentryKey').value === state.serverResetKey.toString()) {
+    function unlock() {
+        if (document.getElementById('reKey').value === state.masterKey.toString()) {
             state.active = true; state.violations = 0;
             document.getElementById('overlay').style.display = 'none';
-            document.getElementById('examFrame').style.display = 'block';
-            document.getElementById('strikeText').innerText = "● SECURITY ACTIVE (RESET)";
+            document.getElementById('statusBar').style.display = 'block';
+            document.getElementById('iframeContainer').style.display = 'block';
+            document.getElementById('strikeText').innerText = "● MONITORING ACTIVE (RESET)";
             document.getElementById('strikeText').style.color = "#238636";
-        } else { alert("Wrong Key."); }
+        } else { alert("Wrong Key"); }
     }
 </script>
 </body>
 </html>
-
-
-
