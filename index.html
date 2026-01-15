@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Secure Mobile Exam Portal</title>
+    <title>Secure Exam Portal</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -15,19 +15,32 @@
         .btn { background: #238636; color: white; border: none; padding: 14px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
         .btn:disabled { background: #21262d; color: #8b949e; }
 
-        /* MOBILE FIX: Bottom Status Bar (Always Visible) */
+        /* HUD - Bottom Status Bar */
         #statusBar { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: #161b22; padding: 12px 20px; border-top: 1px solid #30363d; z-index: 9999; }
         .status-flex { display: flex; justify-content: space-between; align-items: center; }
         #examTimer { font-family: monospace; font-size: 20px; color: #58a6ff; font-weight: bold; }
         
         /* Elements */
-        #iframeContainer { flex: 1; display: none; width: 100%; height: calc(100vh - 55px); background: white; -webkit-overflow-scrolling: touch; }
+        #iframeContainer { flex: 1; display: none; width: 100%; height: calc(100vh - 55px); background: white; }
         iframe { width: 100%; height: 100%; border: none; }
         
-        #overlay, #countdownOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10001; justify-content: center; align-items: center; flex-direction: column; text-align: center; padding: 30px; }
-        #overlay { background: #8b0000; color: white; }
+        /* Overlays */
+        #overlay, #countdownOverlay, #warningOverlay { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 10001; justify-content: center; align-items: center; flex-direction: column; 
+            text-align: center; padding: 30px; 
+        }
+        
         #countdownOverlay { background: rgba(0,0,0,0.95); color: #f85149; }
+        
+        /* RED WARNING SCREEN FOR RESUMPTION */
+        #warningOverlay { background: #bc1c1c; color: white; }
+        #warningOverlay h1 { font-size: 40px; margin-bottom: 20px; }
+        #warningOverlay p { font-size: 18px; line-height: 1.5; margin-bottom: 30px; max-width: 500px; }
+        
+        #overlay { background: #000; color: #ff4d4d; border: 10px solid #ff4d4d; }
         .timer-warning { color: #f85149 !important; }
+        .acknowledge-btn { background: white; color: #bc1c1c; padding: 15px 40px; border-radius: 50px; font-weight: 800; border: none; cursor: pointer; }
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -48,6 +61,12 @@
 
 <div id="countdownOverlay"><h1 id="countDisp" style="font-size: 80px;">10</h1><h2>RETURN IMMEDIATELY</h2></div>
 
+<div id="warningOverlay">
+    <h1>⚠️ STRIKE 1 ISSUED</h1>
+    <p>You exited the exam window or switched tabs for too long.<br><br><b>FINAL WARNING:</b> Any further exit or window switch exceeding 5 seconds will result in an <b>IMMEDIATE PERMANENT LOCK</b>.</p>
+    <button class="acknowledge-btn" onclick="acknowledgeWarning()">I UNDERSTAND, RESUME EXAM</button>
+</div>
+
 <div id="iframeContainer"><iframe id="examFrame" src=""></iframe></div>
 
 <div id="statusBar">
@@ -58,18 +77,19 @@
 </div>
 
 <div id="overlay">
-    <h1>SESSION LOCKED</h1>
-    <p id="lockReason" style="margin: 20px 0;">Security policy violation.</p>
-    <input type="text" id="reKey" placeholder="Instructor Reset Key" style="background:white; color:black; max-width:250px;">
-    <button onclick="unlock()" class="btn" style="max-width:250px;">RESUME EXAM</button>
+    <h1>SESSION PERMANENTLY LOCKED</h1>
+    <p id="lockReason" style="margin: 20px 0; color: white;">Security policy violation.</p>
+    <div style="background: #1a1a1a; padding: 20px; border-radius: 10px; width: 100%; max-width: 350px;">
+        <input type="text" id="reKey" placeholder="Instructor Reset Key" style="background:white; color:black;">
+        <button onclick="unlock()" class="btn">UNLOCK SESSION</button>
+    </div>
 </div>
 
 <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYxD9zAh4mtyQyoPKnlzx9fvzFEqKPmBqpq5oliET4Luk5PSoveU_jHoavVKKDeTFj0g/exec"; 
     const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfimbqiEg3fuQGit-6ZEcIbmdrQOmCR_-KSFVnLMKWvVrY7Vg/viewform?usp=header";
 
-
-    let state = { active: false, violations: 0, timeLeft: 0, leaveTime: null, otp: null, masterKey: null };
+    let state = { active: false, violations: 0, timeLeft: 0, leaveTime: null, otp: null, masterKey: null, isWarningVisible: false };
 
     function sendOTP() {
         const email = document.getElementById('uEmail').value;
@@ -91,7 +111,6 @@
         state.timeLeft = data.duration * 60;
         state.masterKey = data.resetKey;
 
-        // Log Login
         fetch(`${SCRIPT_URL}?action=login&name=${encodeURIComponent(document.getElementById('uName').value)}&reg=${encodeURIComponent(document.getElementById('uReg').value)}&email=${encodeURIComponent(document.getElementById('uEmail').value)}`);
 
         document.getElementById('setup').style.display = 'none';
@@ -102,12 +121,9 @@
         state.active = true;
         setInterval(updateTimer, 1000);
 
-        // ANDROID FIX: Visibility API is better than 'blur' for mobile apps
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) handleLeave(); else handleReturn();
         });
-        window.onblur = handleLeave;
-        window.onfocus = handleReturn;
     }
 
     function updateTimer() {
@@ -122,10 +138,9 @@
     }
 
     function handleLeave() {
-        // Delay check to prevent violation when Android keyboard opens
         setTimeout(() => {
             if (document.activeElement === document.getElementById('examFrame')) return;
-            if (!state.active || state.leaveTime) return;
+            if (!state.active || state.leaveTime || state.isWarningVisible) return;
 
             state.leaveTime = Date.now();
             let limit = state.violations === 0 ? 10 : 5;
@@ -154,18 +169,31 @@
         state.violations++;
         handleReturn();
         if (state.violations === 1) {
+            // SHOW THE ENTIRE SCREEN RED WARNING
+            state.isWarningVisible = true;
+            document.getElementById('iframeContainer').style.display = 'none';
+            document.getElementById('statusBar').style.display = 'none';
+            document.getElementById('warningOverlay').style.display = 'flex';
+            
             document.getElementById('strikeText').innerText = "● SECURITY: 1 STRIKE";
-            document.getElementById('strikeText').style.color = "#e3b341";
-            alert("⚠️ WARNING: One more tab switch will lock the exam.");
+            document.getElementById('strikeText').style.color = "#ff4d4d";
         } else {
-            lockExam("Multiple Tab Switches");
+            lockExam("Final Violation: Repeated Tab Switch");
         }
+    }
+
+    function acknowledgeWarning() {
+        state.isWarningVisible = false;
+        document.getElementById('warningOverlay').style.display = 'none';
+        document.getElementById('iframeContainer').style.display = 'block';
+        document.getElementById('statusBar').style.display = 'block';
     }
 
     function lockExam(reason) {
         state.active = false;
         document.getElementById('iframeContainer').style.display = 'none';
         document.getElementById('statusBar').style.display = 'none';
+        document.getElementById('warningOverlay').style.display = 'none';
         document.getElementById('overlay').style.display = 'flex';
         document.getElementById('lockReason').innerText = reason;
         
@@ -180,7 +208,7 @@
             document.getElementById('iframeContainer').style.display = 'block';
             document.getElementById('strikeText').innerText = "● MONITORING ACTIVE (RESET)";
             document.getElementById('strikeText').style.color = "#238636";
-        } else { alert("Wrong Key"); }
+        } else { alert("Invalid Reset Key"); }
     }
 </script>
 </body>
