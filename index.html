@@ -7,28 +7,25 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
-        /* Setup Container */
+
         #setup { display: flex; justify-content: center; align-items: center; flex: 1; padding: 20px; z-index: 100; }
         .box { background: #161b22; padding: 25px; border-radius: 12px; border: 1px solid #30363d; width: 100%; max-width: 400px; text-align: center; }
         input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; font-size: 16px; }
         .btn { background: #238636; color: white; border: none; padding: 14px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        
-        /* Exam Container - HIDDEN BY DEFAULT */
+
         #iframeContainer { display: none; flex: 1; width: 100%; height: calc(100vh - 55px); background: white; }
         iframe { width: 100%; height: 100%; border: none; }
 
-        /* HUD & Overlays */
         #statusBar { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: #161b22; padding: 12px 20px; border-top: 1px solid #30363d; z-index: 9999; }
         .status-flex { display: flex; justify-content: space-between; align-items: center; }
         #examTimer { font-family: monospace; font-size: 20px; color: #58a6ff; font-weight: bold; }
-        
-        #overlay, #countdownOverlay, #warningOverlay { 
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            z-index: 10001; justify-content: center; align-items: center; flex-direction: column; 
-            text-align: center; padding: 30px; 
+
+        #overlay, #countdownOverlay, #warningOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10001; justify-content: center; align-items: center; flex-direction: column;
+            text-align: center; padding: 30px;
         }
-        
+
         #countdownOverlay { background: rgba(0,0,0,0.95); color: #f85149; }
         #warningOverlay { background: #bc1c1c; color: white; }
         #overlay { background: #000; color: #ff4d4d; border: 10px solid #ff4d4d; }
@@ -83,22 +80,30 @@
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBF_ec8svDceE6RZ-U-z-1JuBe3dyF0zaGmGTO1WKkGO-FrFkZbQ1_wPqHRm1UZkI8/exec"; 
-    const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScC4wY_cFe4Uh6TiCv9PqzRTRZGQxU557GRLI-7mXNi_HixmQ/viewform?embedded=true";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBF_ec8svDceE6RZ-U-z-1JuBe3dyF0zaGmGTO1WKkGO-FrFkZbQ1_wPqHRm1UZkI8/exec";
+    const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScC4wY_cFe4Uh6TiCv9PqzRTRZGQxU557GRLI-7mXNi_HixmQ/viewform?embedded=true&usp=pp_url";
 
-    let state = { 
-        active: false, violations: 0, timeLeft: 3600, 
-        leaveTime: null, otp: null, masterKey: "1234", 
-        isWarningVisible: false, timerStarted: false 
+    let state = {
+        active: false,
+        violations: 0,
+        timeLeft: 3600,
+        leaveTime: null,
+        otp: null,
+        masterKey: "1234",
+        isWarningVisible: false,
+        timerStarted: false,
+        listenersAttached: false,  // FIX #8: prevent duplicate event listeners
+        vTick: null,               // FIX #5: initialize explicitly
+        vTimer: null               // FIX #5: initialize explicitly
     };
 
     if (!navigator.onLine) document.getElementById('offlineNote').style.display = "block";
 
     function sendOTP() {
         const email = document.getElementById('uEmail').value;
-        if(!email.includes('@')) return alert("Enter valid email");
+        if (!email.includes('@')) return alert("Enter valid email");
         document.getElementById('otpBtn').innerText = "...";
-        
+
         fetch(`${SCRIPT_URL}?action=sendOTP&email=${encodeURIComponent(email)}`)
             .then(r => r.text()).then(code => {
                 state.otp = code.trim();
@@ -106,7 +111,7 @@
                 document.getElementById('otpBtn').innerText = "Sent";
             })
             .catch(() => {
-                state.otp = "0000"; // Fallback for weak connections
+                state.otp = "0000";
                 document.getElementById('otpIn').style.display = "block";
                 document.getElementById('otpBtn').innerText = "Offline";
             });
@@ -116,7 +121,6 @@
         const enteredOTP = document.getElementById('otpIn').value;
         const uName = document.getElementById('uName').value;
 
-        // CRITICAL FIX: The logic gate
         if (!uName) return alert("Please enter your name.");
         if (state.otp && enteredOTP !== state.otp && enteredOTP !== "0000") {
             return alert("Invalid OTP. Access Denied.");
@@ -129,59 +133,78 @@
             const res = await fetch(`${SCRIPT_URL}?action=getSettings`);
             const data = await res.json();
             state.timeLeft = data.duration * 60;
-            state.masterKey = data.resetKey;
+            state.masterKey = String(data.resetKey); // FIX #7: always store as string
             fetch(`${SCRIPT_URL}?action=login&name=${encodeURIComponent(uName)}&reg=${encodeURIComponent(document.getElementById('uReg').value)}`);
         } catch (e) { console.warn("Offline Start"); }
 
-        // Transition UI
         document.getElementById('setup').style.display = 'none';
         document.getElementById('iframeContainer').style.display = 'block';
         document.getElementById('statusBar').style.display = 'block';
         document.getElementById('examFrame').src = FORM_URL;
-        
+
         state.active = true;
+
+        // FIX #8: only attach timer and listeners once
         if (!state.timerStarted) {
             setInterval(updateTimer, 1000);
             state.timerStarted = true;
         }
 
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) handleLeave(); else handleReturn();
-        });
+        if (!state.listenersAttached) {
+            document.addEventListener('visibilitychange', onVisibilityChange);
+            state.listenersAttached = true;
+        }
     }
 
+    // FIX #3/#4: single named handler so it's not duplicated and handles timing correctly
+    function onVisibilityChange() {
+        if (document.hidden) {
+            handleLeave();
+        } else {
+            handleReturn();
+        }
+    }
+
+    // FIX #1: proper HH:MM:SS display
     function updateTimer() {
         if (!state.active || state.timeLeft <= 0) return;
         state.timeLeft--;
-        const m = Math.floor(state.timeLeft / 60);
+        const h = Math.floor(state.timeLeft / 3600);
+        const m = Math.floor((state.timeLeft % 3600) / 60);
         const s = state.timeLeft % 60;
         const timerDisp = document.getElementById('examTimer');
-        timerDisp.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        timerDisp.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
         if (state.timeLeft < 300) timerDisp.classList.add('timer-warning');
         if (state.timeLeft === 0) lockExam("Time Expired");
     }
 
     function handleLeave() {
-        setTimeout(() => {
-            if (document.activeElement === document.getElementById('examFrame')) return;
-            if (!state.active || state.leaveTime || state.isWarningVisible) return;
-            state.leaveTime = Date.now();
-            let limit = state.violations === 0 ? 10 : 5;
-            document.getElementById('countdownOverlay').style.display = 'flex';
-            let count = limit;
-            state.vTick = setInterval(() => {
-                count--;
-                document.getElementById('countDisp').innerText = count > 0 ? count : 0;
-                if (count <= 0) clearInterval(state.vTick);
-            }, 1000);
-            state.vTimer = setTimeout(() => { triggerStrike(); }, limit * 1000 + 500);
-        }, 300);
+        // FIX #2/#4: no delayed setTimeout; check state directly and set leaveTime immediately
+        if (!state.active || state.leaveTime !== null || state.isWarningVisible) return;
+        state.leaveTime = Date.now();
+
+        let limit = state.violations === 0 ? 10 : 5;
+        document.getElementById('countdownOverlay').style.display = 'flex';
+        let count = limit;
+        document.getElementById('countDisp').innerText = count;
+
+        // FIX #5: use state.vTick / state.vTimer (already initialized on state)
+        state.vTick = setInterval(() => {
+            count--;
+            document.getElementById('countDisp').innerText = count > 0 ? count : 0;
+            if (count <= 0) clearInterval(state.vTick);
+        }, 1000);
+
+        state.vTimer = setTimeout(() => { triggerStrike(); }, limit * 1000 + 500);
     }
 
     function handleReturn() {
-        if (!state.active || !state.leaveTime) return;
+        // FIX #4: guard on leaveTime being non-null (set immediately in handleLeave now)
+        if (!state.active || state.leaveTime === null) return;
         clearInterval(state.vTick);
         clearTimeout(state.vTimer);
+        state.vTick = null;
+        state.vTimer = null;
         document.getElementById('countdownOverlay').style.display = 'none';
         state.leaveTime = null;
     }
@@ -215,18 +238,25 @@
         document.getElementById('warningOverlay').style.display = 'none';
         document.getElementById('overlay').style.display = 'flex';
         document.getElementById('lockReason').innerText = reason;
-        if (navigator.onLine) fetch(`${SCRIPT_URL}?name=${encodeURIComponent(document.getElementById('uName').value)}&violation=${encodeURIComponent(reason)}`);
+        // FIX #6: added action=violation parameter so Apps Script can route correctly
+        if (navigator.onLine) {
+            fetch(`${SCRIPT_URL}?action=violation&name=${encodeURIComponent(document.getElementById('uName').value)}&violation=${encodeURIComponent(reason)}`);
+        }
     }
 
     function unlock() {
-        if (document.getElementById('reKey').value === state.masterKey.toString()) {
-            state.active = true; state.violations = 0;
+        // FIX #7: strict string comparison (masterKey is now always stored as string)
+        if (document.getElementById('reKey').value === state.masterKey) {
+            state.active = true;
+            state.violations = 0;
             document.getElementById('overlay').style.display = 'none';
             document.getElementById('statusBar').style.display = 'block';
             document.getElementById('iframeContainer').style.display = 'block';
             document.getElementById('strikeText').innerText = "● MONITORING ACTIVE (RESET)";
             document.getElementById('strikeText').style.color = "#238636";
-        } else { alert("Invalid Reset Key"); }
+        } else {
+            alert("Invalid Reset Key");
+        }
     }
 
     window.addEventListener('offline', () => {
