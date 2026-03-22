@@ -2,266 +2,522 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>Kigen Exam Portal - Secure</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kigen — Secure Exam Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        :root {
+            --bg:       #070a0f;
+            --surface:  #0d1219;
+            --card:     #111820;
+            --border:   #1c2733;
+            --border-hi:#2a3a4a;
+            --green:    #00d084;
+            --green-lo: #00d08414;
+            --amber:    #f5a623;
+            --amber-lo: #f5a62314;
+            --red:      #ff3b5c;
+            --red-lo:   #ff3b5c14;
+            --blue:     #38bdf8;
+            --blue-lo:  #38bdf814;
+            --text:     #dde4ec;
+            --muted:    #4a6272;
+            --mono:     'JetBrains Mono', monospace;
+            --sans:     'Sora', sans-serif;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #0d1117; color: #c9d1d9;
-            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
-        /* ── Setup ── */
-        #setup { display: flex; justify-content: center; align-items: center; flex: 1; padding: 20px; }
-        .box {
-            background: #161b22; padding: 28px; border-radius: 12px;
-            border: 1px solid #30363d; width: 100%; max-width: 420px; text-align: center;
+        /* subtle grid texture */
+        body::after {
+            content:'';
+            position:fixed; inset:0;
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px;
+            opacity: 0.18;
+            pointer-events: none;
+            z-index: 0;
         }
-        .box h2 { margin-bottom: 4px; font-size: 20px; }
-        .box .sub { font-size: 12px; color: #8b949e; margin-bottom: 18px; }
+
+        /* ── SETUP SCREEN ── */
+        #setup {
+            display: flex; justify-content: center; align-items: center;
+            flex: 1; padding: 20px; position: relative; z-index: 10;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 36px 32px;
+            width: 100%; max-width: 440px;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(0,208,132,0.04);
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content:'';
+            position:absolute; top:0; left:0; right:0;
+            height:2px;
+            background: linear-gradient(90deg, transparent, var(--green), transparent);
+        }
+
+        .logo-mark {
+            display: inline-flex;
+            align-items: center; justify-content: center;
+            width: 48px; height: 48px;
+            background: var(--green-lo);
+            border: 1px solid var(--green);
+            border-radius: 12px;
+            margin-bottom: 18px;
+        }
+        .logo-mark svg { width:22px; height:22px; fill:var(--green); }
+
+        .card h2 {
+            font-size: 20px; font-weight: 600;
+            color: var(--text); margin-bottom: 4px;
+        }
+        .card .sub {
+            font-size: 12px; color: var(--muted);
+            margin-bottom: 24px; font-family: var(--mono);
+            letter-spacing: 1px;
+        }
+
+        .field { margin-bottom: 10px; text-align: left; }
+        .field label {
+            display: block;
+            font-family: var(--mono);
+            font-size: 10px; letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted); margin-bottom: 5px;
+        }
         input {
-            width: 100%; padding: 12px; margin: 6px 0;
-            border-radius: 6px; border: 1px solid #30363d;
-            background: #0d1117; color: white; font-size: 15px;
+            width: 100%; padding: 11px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-family: var(--mono); font-size: 13px;
+            transition: border-color 0.2s;
+            outline: none;
         }
-        input:focus { outline: none; border-color: #58a6ff; }
-        .row { display: flex; gap: 8px; align-items: flex-start; }
+        input:focus { border-color: var(--blue); }
+        input::placeholder { color: var(--muted); }
+        input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .row { display: flex; gap: 8px; }
         .row input { flex: 1; }
+
         #otpBtn {
-            white-space: nowrap; padding: 12px 14px; margin-top: 6px;
-            background: #21262d; color: #c9d1d9; border: 1px solid #30363d;
-            border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;
+            padding: 11px 14px; white-space: nowrap;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--blue); font-family: var(--mono);
+            font-size: 11px; letter-spacing: 1px;
+            cursor: pointer; transition: all 0.15s;
+            margin-top: 0;
         }
-        #otpBtn:hover:not(:disabled) { background: #30363d; }
-        #otpBtn:disabled { opacity: 0.5; cursor: default; }
-        .btn {
-            background: #238636; color: white; border: none;
-            padding: 14px; border-radius: 6px; cursor: pointer;
-            font-weight: bold; width: 100%; margin-top: 12px; font-size: 15px;
-        }
-        .btn:hover:not(:disabled) { background: #2ea043; }
-        .btn:disabled { background: #21262d; color: #8b949e; cursor: default; }
-        #statusMsg { font-size: 12px; margin-top: 10px; min-height: 18px; color: #8b949e; }
-        #statusMsg.error   { color: #f85149; }
-        #statusMsg.success { color: #3fb950; }
-        #offlineNote { font-size: 11px; margin-top: 8px; color: #8b949e; display: none; }
+        #otpBtn:hover:not(:disabled) { border-color: var(--blue); background: var(--blue-lo); }
+        #otpBtn:disabled { opacity: 0.4; cursor: default; }
 
-        /* ── Exam frame ── */
-        #iframeContainer { display: none; flex: 1; width: 100%; height: calc(100vh - 48px); }
-        iframe { width: 100%; height: 100%; border: none; background: white; }
-
-        /* ── Status bar ── */
-        #statusBar {
-            display: none; position: fixed; bottom: 0; left: 0; width: 100%;
-            background: #161b22; padding: 10px 20px;
-            border-top: 1px solid #30363d; z-index: 9999;
-        }
-        .status-flex { display: flex; justify-content: space-between; align-items: center; }
-        #examTimer { font-family: monospace; font-size: 20px; color: #58a6ff; font-weight: bold; }
-        .timer-warning { color: #f85149 !important; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
-
-        /* ── Overlays ── */
-        #countdownOverlay, #warningOverlay, #overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 10001; justify-content: center; align-items: center;
-            flex-direction: column; text-align: center; padding: 30px;
-        }
-        #countdownOverlay { background: rgba(0,0,0,0.96); color: #f85149; }
-        #countdownOverlay h1 { font-size: 90px; font-family: monospace; line-height: 1; }
-        #countdownOverlay h2 { font-size: 18px; margin-top: 16px; letter-spacing: 2px; }
-        #warningOverlay { background: #bc1c1c; color: white; }
-        #warningOverlay h1 { font-size: 28px; }
-        #warningOverlay p  { margin-top: 16px; font-size: 16px; line-height: 1.7; }
-        .ack-btn {
-            background: white; color: #bc1c1c; padding: 14px 42px;
-            border-radius: 50px; font-weight: 800; border: none;
-            cursor: pointer; margin-top: 28px; font-size: 16px;
-        }
-        #overlay { background: #000; color: #ff4d4d; border: 10px solid #ff4d4d; }
-        #overlay h1 { font-size: 32px; }
-        #lockReason { margin: 16px 0; color: white; font-size: 15px; }
-        .unlock-box {
-            background: #1a1a1a; padding: 20px; border-radius: 10px;
-            width: 100%; max-width: 350px; margin-top: 10px;
-        }
-        .unlock-box p { color: #8b949e; font-size: 13px; margin-bottom: 10px; }
-
-        /* ── Offline banner ── */
-        #offlineBanner {
-            display: none; background: #e3b341; color: #000;
-            text-align: center; padding: 5px; font-size: 12px; font-weight: bold;
+        #otpField { display: none; margin-top: 10px; }
+        #otpInput {
+            text-align: center;
+            letter-spacing: 8px;
+            font-size: 22px; font-weight: 600;
         }
 
-        /* ── Spinner ── */
+        .start-btn {
+            width: 100%; padding: 14px;
+            border: none; border-radius: 10px;
+            background: var(--green);
+            color: #000;
+            font-family: var(--mono); font-size: 12px;
+            font-weight: 700; letter-spacing: 3px;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: all 0.15s;
+        }
+        .start-btn:hover:not(:disabled) { background: #00f09a; transform: translateY(-1px); }
+        .start-btn:disabled {
+            background: var(--border); color: var(--muted);
+            cursor: not-allowed; transform: none;
+        }
+
+        #statusMsg {
+            font-family: var(--mono); font-size: 11px;
+            min-height: 16px; margin-top: 10px;
+            transition: color 0.2s;
+        }
+        #statusMsg.err  { color: var(--red); }
+        #statusMsg.ok   { color: var(--green); }
+        #statusMsg.info { color: var(--muted); }
+
         .spinner {
-            display: inline-block; width: 13px; height: 13px;
-            border: 2px solid #ffffff33; border-top-color: #fff;
-            border-radius: 50%; animation: spin .7s linear infinite;
-            vertical-align: middle; margin-right: 6px;
+            display: inline-block; width: 11px; height: 11px;
+            border: 2px solid #ffffff22; border-top-color: currentColor;
+            border-radius: 50%; animation: spin 0.7s linear infinite;
+            vertical-align: middle; margin-right: 5px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── STATUS BAR ── */
+        #statusBar {
+            display: none;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 22px;
+            z-index: 100; position: relative;
+        }
+        .hud {
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        #strikeText {
+            font-family: var(--mono); font-size: 11px;
+            letter-spacing: 1px; color: var(--green);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .hud-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 6px var(--green);
+            animation: pulse-dot 2s infinite;
+        }
+        .hud-dot.warn  { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+        .hud-dot.dead  { background: var(--red);   box-shadow: none; animation: none; }
+        @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        #examTimer {
+            font-family: var(--mono); font-size: 20px; font-weight: 700;
+            color: var(--blue); letter-spacing: 3px;
+        }
+        #examTimer.warn { color: var(--amber); animation: blink-t 1s infinite; }
+        #examTimer.crit { color: var(--red);   animation: blink-t 0.5s infinite; }
+        @keyframes blink-t { 50% { opacity: 0.5; } }
+
+        /* ── EXAM FRAME ── */
+        #iframeWrap {
+            display: none; flex: 1; position: relative; z-index: 1;
+        }
+        #examFrame { width:100%; height:100%; border:none; background:white; display:block; }
+
+        /* ── OVERLAYS ── */
+        .overlay-base {
+            display: none; position: fixed; inset: 0;
+            z-index: 9000;
+            justify-content: center; align-items: center;
+            flex-direction: column; text-align: center; padding: 30px;
+        }
+
+        /* Countdown */
+        #countdownOverlay {
+            background: rgba(7,10,15,0.97);
+            backdrop-filter: blur(4px);
+        }
+        #countdownOverlay h1 {
+            font-family: var(--mono); font-size: 110px; font-weight: 700;
+            color: var(--red); line-height: 1;
+            text-shadow: 0 0 40px var(--red);
+        }
+        #countdownOverlay p {
+            font-family: var(--mono); font-size: 13px;
+            letter-spacing: 4px; color: var(--muted);
+            margin-top: 16px; text-transform: uppercase;
+        }
+
+        /* Warning (strike 1) */
+        #warningOverlay {
+            background: #1a0505;
+            border: 2px solid var(--red);
+        }
+        #warningOverlay h1 { font-size: 28px; color: var(--red); margin-bottom: 12px; }
+        #warningOverlay p  { color: #c9a0a0; font-size: 15px; line-height: 1.7; max-width: 400px; }
+        #warningOverlay .ack {
+            margin-top: 28px;
+            padding: 13px 40px;
+            border-radius: 50px;
+            background: var(--red);
+            color: white; border: none;
+            font-family: var(--mono); font-size: 12px;
+            font-weight: 700; letter-spacing: 2px;
+            cursor: pointer; transition: all 0.15s;
+        }
+        #warningOverlay .ack:hover { background: #ff5577; }
+
+        /* Locked */
+        #lockedOverlay {
+            background: var(--bg);
+            border: none;
+        }
+        .lock-card {
+            background: var(--card);
+            border: 1px solid var(--red);
+            border-radius: 16px;
+            padding: 36px 32px;
+            max-width: 400px; width: 100%;
+            box-shadow: 0 0 60px rgba(255,59,92,0.12);
+        }
+        .lock-icon { font-size: 42px; margin-bottom: 14px; }
+        .lock-card h2 { font-size: 22px; color: var(--red); margin-bottom: 8px; }
+        .lock-card p  { color: var(--muted); font-size: 13px; margin-bottom: 22px; line-height: 1.6; }
+        #lockReason {
+            font-family: var(--mono); font-size: 12px;
+            color: var(--amber); margin-bottom: 20px;
+            padding: 8px 12px; background: var(--amber-lo);
+            border: 1px solid var(--amber); border-radius: 6px;
+        }
+        #reKey { text-align:center; letter-spacing:4px; font-size:16px; }
+        .unlock-btn {
+            width: 100%; padding: 12px;
+            background: var(--red-lo); border: 1px solid var(--red);
+            color: var(--red);
+            border-radius: 8px; font-family: var(--mono);
+            font-size: 11px; font-weight: 700; letter-spacing: 2px;
+            cursor: pointer; margin-top: 10px; transition: all 0.15s;
+        }
+        .unlock-btn:hover { background: var(--red); color: white; }
+
+        /* Offline banner */
+        #offlineBanner {
+            display: none; position: fixed; top: 0; left: 0; right: 0;
+            background: var(--amber); color: #000;
+            text-align: center; padding: 6px;
+            font-family: var(--mono); font-size: 11px;
+            font-weight: 700; letter-spacing: 2px;
+            z-index: 9999;
+        }
     </style>
 </head>
 <body oncontextmenu="return false;">
 
-<div id="offlineBanner">⚠ INTERNET INTERRUPTED — WORK LOCALLY</div>
+<div id="offlineBanner">⚠ INTERNET INTERRUPTED</div>
 
 <!-- ── SETUP ── -->
 <div id="setup">
-    <div class="box">
-        <h2>Exam Verification</h2>
-        <p class="sub">Complete all steps to access your exam</p>
-
-        <input type="text"  id="uName"  placeholder="Full Name">
-        <input type="text"  id="uReg"   placeholder="Registration Number">
-        <div class="row">
-            <input type="email" id="uEmail" placeholder="Gmail address">
-            <button id="otpBtn" onclick="sendOTP()" disabled>Get OTP</button>
+    <div class="card">
+        <div class="logo-mark">
+            <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l6 2.67V11c0 3.93-2.67 7.62-6 8.93C8.67 18.62 6 14.93 6 11V7.67L12 5z"/></svg>
         </div>
-        <input type="text" id="otpIn" placeholder="Enter 4-digit OTP"
-               style="display:none; text-align:center; letter-spacing:6px; font-size:20px;">
+        <h2>Exam Verification</h2>
+        <p class="sub">KIGEN SECURE EXAM PORTAL</p>
 
-        <button id="startBtn" class="btn" onclick="syncAndStart()" disabled>START EXAM</button>
-        <p id="statusMsg"></p>
-        <p id="offlineNote">No internet? Use backup code: <b>0000</b></p>
+        <div class="field">
+            <label>Full Name</label>
+            <input type="text" id="uName" placeholder="Enter your full name" autocomplete="off">
+        </div>
+        <div class="field">
+            <label>Registration Number</label>
+            <input type="text" id="uReg" placeholder="Enter your reg number" autocomplete="off">
+        </div>
+        <div class="field">
+            <label>Gmail Address</label>
+            <div class="row">
+                <input type="email" id="uEmail" placeholder="yourname@gmail.com" autocomplete="off">
+                <button id="otpBtn" onclick="sendOTP()" disabled>GET OTP</button>
+            </div>
+        </div>
+
+        <div id="otpField" class="field">
+            <label>One-Time Code</label>
+            <input type="text" id="otpInput" placeholder="· · · ·"
+                   maxlength="4" autocomplete="off" oninput="this.value=this.value.replace(/\D/g,'')">
+        </div>
+
+        <button class="start-btn" id="startBtn" onclick="syncAndStart()" disabled>
+            VERIFY &amp; START EXAM
+        </button>
+        <p id="statusMsg" class="info"></p>
     </div>
 </div>
 
 <!-- ── COUNTDOWN ── -->
-<div id="countdownOverlay">
+<div class="overlay-base" id="countdownOverlay">
     <h1 id="countDisp">10</h1>
-    <h2>RETURN TO EXAM IMMEDIATELY</h2>
+    <p>Return to exam immediately</p>
 </div>
 
-<!-- ── STRIKE WARNING ── -->
-<div id="warningOverlay">
-    <h1>⚠️ STRIKE 1 ISSUED</h1>
-    <p>You exited the exam window.<br><br>
-       <b>FINAL WARNING:</b> One more switch will permanently <b>LOCK</b> your session.</p>
-    <button class="ack-btn" onclick="acknowledgeWarning()">RESUME EXAM</button>
+<!-- ── STRIKE 1 WARNING ── -->
+<div class="overlay-base" id="warningOverlay">
+    <h1>⚠ STRIKE 1 ISSUED</h1>
+    <p>You switched away from the exam window.<br><br>
+       <strong>One more violation will permanently lock your session.</strong><br>
+       Your instructor has been notified.</p>
+    <button class="ack" onclick="acknowledgeWarning()">ACKNOWLEDGE &amp; RESUME</button>
 </div>
 
-<!-- ── EXAM IFRAME ──
-     src is set to SCRIPT_URL?action=loadForm&token=XXX
-     The raw Google Form URL never appears here or anywhere in this file.
--->
-<div id="iframeContainer">
-    <iframe id="examFrame" src=""
+<!-- ── EXAM FRAME ── -->
+<div id="statusBar">
+    <div class="hud">
+        <div id="strikeText">
+            <span class="hud-dot" id="hudDot"></span>
+            <span id="hudLabel">PROCTORING ACTIVE</span>
+        </div>
+        <div id="examTimer">00:00:00</div>
+    </div>
+</div>
+<div id="iframeWrap">
+    <iframe id="examFrame" src="about:blank"
             sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-top-navigation-by-user-activation">
     </iframe>
 </div>
 
-<!-- ── STATUS BAR ── -->
-<div id="statusBar">
-    <div class="status-flex">
-        <span id="strikeText" style="color:#238636;font-size:12px;">● PROCTORING ACTIVE</span>
-        <span id="examTimer">00:00:00</span>
-    </div>
-</div>
-
 <!-- ── LOCKED ── -->
-<div id="overlay">
-    <h1>🔒 SESSION LOCKED</h1>
-    <p id="lockReason">Policy Violation.</p>
-    <div class="unlock-box">
-        <p>Contact your instructor for the reset key.</p>
-        <input type="password" id="reKey" placeholder="Instructor Reset Key"
-               style="background:white; color:black;">
-        <button onclick="unlock()" class="btn">UNLOCK SESSION</button>
+<div class="overlay-base" id="lockedOverlay">
+    <div class="lock-card">
+        <div class="lock-icon">🔒</div>
+        <h2>Session Locked</h2>
+        <p>Your session has been locked due to a security violation. Contact your instructor for the reset key.</p>
+        <div id="lockReason">—</div>
+        <input type="password" id="reKey" placeholder="Instructor Reset Key" autocomplete="off">
+        <button class="unlock-btn" onclick="tryUnlock()">UNLOCK SESSION</button>
     </div>
 </div>
 
 <script>
 // ─────────────────────────────────────────────────────────────────
-//  ONLY the Apps Script deployment URL lives here.
-//  The Google Form URL exists ONLY inside the Apps Script code.
+//  CONFIG — ONLY the Apps Script URL lives here.
+//  The Google Form URL NEVER appears in this file.
+//  It is returned by the server only after token verification.
 // ─────────────────────────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlpZhWL3ofzTX0YEs-g62hDbVw6Gs0wFmWiw8ZEiHfBm83dG5JY2GCsLG6E2IeFEr9/exec"
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYxD9zAh4mtyQyoPKnlzx9fvzFEqKPmBqpq5oliET4Luk5PSoveU_jHoavVKKDeTFj0g/exec";
+
 // ── State ─────────────────────────────────────────────────────────
 const S = {
     active:            false,
+    armed:             false,
     violations:        0,
-    timeLeft:          3600,
+    timeLeft:          0,
     leaveTime:         null,
-    masterKey:         null,
+    masterKey:         null,   // fetched from server after token verified
     isWarningVisible:  false,
     timerStarted:      false,
     listenersAttached: false,
     vTick:             null,
-    vTimer:            null
+    vTimer:            null,
+    hardTimer:         null,
+    otpSent:           false,
+    otpAttempts:       0,      // client-side rate-limit guard
+    startAttempts:     0
 };
 
 // ── Boot ──────────────────────────────────────────────────────────
-if (!navigator.onLine) document.getElementById('offlineNote').style.display = "block";
+document.getElementById('uEmail').addEventListener('input', function () {
+    document.getElementById('otpBtn').disabled =
+        !this.value.includes('@') ||
+        !document.getElementById('uName').value.trim() ||
+        !document.getElementById('uReg').value.trim();
+});
+['uName','uReg'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+        const em = document.getElementById('uEmail').value;
+        document.getElementById('otpBtn').disabled =
+            !em.includes('@') ||
+            !document.getElementById('uName').value.trim() ||
+            !document.getElementById('uReg').value.trim();
+    });
+});
 
-document.getElementById('uEmail').addEventListener('input', function() {
-    document.getElementById('otpBtn').disabled = !this.value.includes('@');
+// ── Keyboard security ─────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+    if (!S.active) return;
+    if (e.key === 'PrintScreen' || (e.ctrlKey && ['p','s','u'].includes(e.key.toLowerCase()))) {
+        e.preventDefault();
+    }
+    // Block F12 DevTools shortcut during exam
+    if (e.key === 'F12') e.preventDefault();
 });
 
 // ─────────────────────────────────────────────────────────────────
-//  STEP 1 — Send OTP
+//  STEP 1 — Send OTP (server generates and emails it)
+//  FIX: OTP is never returned to the client. Server stores it and
+//       verifies it internally on the verifyOTP call.
 // ─────────────────────────────────────────────────────────────────
 async function sendOTP() {
-    const name  = $('uName').value.trim();
-    const reg   = $('uReg').value.trim();
-    const email = $('uEmail').value.trim();
+    // Client-side rate limit (3 attempts max per session)
+    if (S.otpAttempts >= 3) return setStatus('Too many OTP requests. Refresh and try again.', 'err');
+    S.otpAttempts++;
 
-    if (!name)              return status('Enter your full name first.', 'error');
-    if (!reg)               return status('Enter your registration number first.', 'error');
-    if (!email.includes('@')) return status('Enter a valid Gmail address.', 'error');
+    const name  = document.getElementById('uName').value.trim();
+    const reg   = document.getElementById('uReg').value.trim();
+    const email = document.getElementById('uEmail').value.trim();
 
-    $('otpBtn').disabled = true;
-    status('<span class="spinner"></span>Sending OTP…');
+    if (!name || !reg || !email.includes('@'))
+        return setStatus('Fill in all fields before requesting OTP.', 'err');
+
+    document.getElementById('otpBtn').disabled = true;
+    setStatus('<span class="spinner"></span>Sending OTP…', 'info');
 
     try {
         const res  = await fetch(`${SCRIPT_URL}?action=sendOTP&email=${enc(email)}&name=${enc(name)}&reg=${enc(reg)}`);
         const data = await res.json();
 
         if (data.status === 'ok') {
-            showOTPField();
-            status('OTP sent! Check your Gmail inbox.', 'success');
+            S.otpSent = true;
+            document.getElementById('otpField').style.display = 'block';
+            document.getElementById('otpInput').focus();
+            document.getElementById('startBtn').disabled = false;
+            setStatus('OTP sent to ' + email + '. Check your inbox.', 'ok');
+            // Allow resend after 60s
+            setTimeout(() => {
+                document.getElementById('otpBtn').disabled = false;
+                document.getElementById('otpBtn').innerText = 'RESEND';
+                setStatus('You may request a new OTP now.', 'info');
+            }, 60000);
         } else {
-            $('otpBtn').disabled = false;
-            status(data.message || 'Failed to send OTP. Try again.', 'error');
+            document.getElementById('otpBtn').disabled = false;
+            setStatus(data.message || 'Failed to send OTP. Try again.', 'err');
         }
     } catch {
-        // Server unreachable — allow offline backup code
-        showOTPField();
-        status('Cannot reach server. Use backup code 0000 if offline.', 'error');
+        // Offline path — allow backup code
+        S.otpSent = true;
+        document.getElementById('otpField').style.display = 'block';
+        document.getElementById('otpInput').focus();
+        document.getElementById('startBtn').disabled = false;
+        setStatus('Cannot reach server. If offline, use backup code 0000.', 'err');
+        document.getElementById('otpBtn').disabled = false;
     }
 }
 
-function showOTPField() {
-    $('otpIn').style.display = 'block';
-    $('otpIn').focus();
-    $('startBtn').disabled = false;
-    // Allow resend after 60s
-    setTimeout(() => {
-        $('otpBtn').disabled = false;
-        $('otpBtn').innerText = 'Resend';
-    }, 60000);
-}
-
 // ─────────────────────────────────────────────────────────────────
-//  STEP 2 — Verify OTP → server returns a one-time token only
-//           The token is then used as the iframe src parameter.
-//           The form URL never touches the browser.
+//  STEP 2 — Verify OTP server-side → receive one-time token
+//  FIX: OTP verified on server. Server returns only a token.
+//  FIX: Token passed as iframe src param → server serves form page.
+//  FIX: Form URL NEVER sent to browser.
 // ─────────────────────────────────────────────────────────────────
 async function syncAndStart() {
-    const name  = $('uName').value.trim();
-    const reg   = $('uReg').value.trim();
-    const email = $('uEmail').value.trim();
-    const otp   = $('otpIn').value.trim();
+    // Rate limit start attempts
+    if (S.startAttempts >= 5) return setStatus('Too many attempts. Contact your instructor.', 'err');
+    S.startAttempts++;
 
-    if (!name)               return status('Enter your full name.', 'error');
-    if (!reg)                return status('Enter your registration number.', 'error');
-    if (!email.includes('@'))return status('Enter your Gmail address.', 'error');
-    if (!otp)                return status('Enter the OTP sent to your email.', 'error');
+    const name  = document.getElementById('uName').value.trim();
+    const reg   = document.getElementById('uReg').value.trim();
+    const email = document.getElementById('uEmail').value.trim();
+    const otp   = document.getElementById('otpInput').value.trim();
 
-    $('startBtn').disabled = true;
-    status('<span class="spinner"></span>Verifying identity…');
+    if (!name)               return setStatus('Enter your full name.', 'err');
+    if (!reg)                return setStatus('Enter your registration number.', 'err');
+    if (!email.includes('@'))return setStatus('Enter your Gmail address.', 'err');
+    if (!otp)                return setStatus('Enter the OTP from your email.', 'err');
+    if (!S.otpSent)          return setStatus("Click 'GET OTP' first.", 'err');
+
+    document.getElementById('startBtn').disabled = true;
+    setStatus('<span class="spinner"></span>Verifying identity…', 'info');
 
     try {
         const res  = await fetch(
@@ -271,137 +527,140 @@ async function syncAndStart() {
         const data = await res.json();
 
         if (data.status === 'denied') {
-            $('startBtn').disabled = false;
-            return status('❌ Invalid or expired OTP. Access denied.', 'error');
+            document.getElementById('startBtn').disabled = false;
+            return setStatus('❌ Invalid or expired OTP. Access denied.', 'err');
         }
 
         if (data.status === 'ok') {
-            // We receive a short-lived token, NOT the form URL
-            // The iframe loads: SCRIPT_URL?action=loadForm&token=<token>
-            // Apps Script validates the token and streams the form page
-            S.timeLeft  = (data.duration || 60) * 60;
+            S.timeLeft = (data.duration || 60) * 60;
             S.masterKey = String(data.resetKey);
-
+            // data.token is a UUID — not the form URL
             const proxyURL = `${SCRIPT_URL}?action=loadForm&token=${enc(data.token)}`;
-            launchExam(proxyURL, name);
+            launchExam(proxyURL, name, reg, email);
         }
     } catch {
+        // Offline fallback
         if (otp === '0000') {
-            // Offline fallback — no form URL available, show holding screen
-            status('Offline mode active.', 'success');
-            launchExam(null, name);
+            setStatus('Offline mode. Form unavailable until reconnected.', 'info');
+            launchExam(null, name, reg, email);
         } else {
-            $('startBtn').disabled = false;
-            status('Cannot reach server. Use backup code 0000 if offline.', 'error');
+            document.getElementById('startBtn').disabled = false;
+            setStatus('Cannot reach server. Use backup code 0000 if offline.', 'err');
         }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Launch exam UI
+//  Launch exam
 // ─────────────────────────────────────────────────────────────────
-function launchExam(proxyURL, name) {
-    $('setup').style.display         = 'none';
-    $('iframeContainer').style.display = 'block';
-    $('statusBar').style.display     = 'block';
+function launchExam(proxyURL, name, reg, email) {
+    document.getElementById('setup').style.display    = 'none';
+    document.getElementById('statusBar').style.display = 'block';
+    document.getElementById('iframeWrap').style.display= 'flex';
 
-    if (proxyURL) {
-        $('examFrame').src = proxyURL;
-    } else {
-        $('examFrame').srcdoc = offlineScreen(name);
+    document.getElementById('examFrame').src = proxyURL || 'about:blank';
+    if (!proxyURL) {
+        document.getElementById('examFrame').srcdoc = offlinePage(name);
     }
 
     S.active = true;
 
     if (!S.timerStarted) {
-        setInterval(updateTimer, 1000);
+        setInterval(tick, 1000);
         S.timerStarted = true;
     }
+
+    // Arm proctoring after 2s (enough for iframe to load)
+    setTimeout(() => { S.armed = true; }, 2000);
+
     if (!S.listenersAttached) {
+        // FIX: use visibilitychange (reliable) instead of blur/focus (unreliable)
         document.addEventListener('visibilitychange', onVisibilityChange);
         S.listenersAttached = true;
     }
 
-    // Log login (non-blocking)
-    fetch(`${SCRIPT_URL}?action=login&name=${enc($('uName').value)}&reg=${enc($('uReg').value)}`).catch(()=>{});
-}
-
-function offlineScreen(name) {
-    return `<html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#f6f8fa;">
-        <h2 style="color:#1f2328;">Offline Mode</h2>
-        <p style="color:#57606a;margin-top:12px;">Your exam form will load once connectivity is restored,
-        or your instructor will provide the direct link.</p>
-        <p style="color:#57606a;font-size:14px;margin-top:20px;">Student: <b>${name.replace(/</g,'&lt;')}</b></p>
-    </body></html>`;
+    // Log login
+    fetch(`${SCRIPT_URL}?action=login&name=${enc(name)}&reg=${enc(reg)}&email=${enc(email)}`).catch(()=>{});
 }
 
 // ─────────────────────────────────────────────────────────────────
 //  Timer
 // ─────────────────────────────────────────────────────────────────
-function updateTimer() {
+function tick() {
     if (!S.active || S.timeLeft <= 0) return;
     S.timeLeft--;
     const h = Math.floor(S.timeLeft / 3600);
     const m = Math.floor((S.timeLeft % 3600) / 60);
     const s = S.timeLeft % 60;
-    const el = $('examTimer');
+    const el = document.getElementById('examTimer');
     el.innerText = pad(h) + ':' + pad(m) + ':' + pad(s);
-    if (S.timeLeft < 300) el.classList.add('timer-warning');
+    el.className = S.timeLeft < 60 ? 'crit' : S.timeLeft < 300 ? 'warn' : '';
     if (S.timeLeft === 0) lockExam('Time Expired');
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Proctoring
+//  Proctoring — visibilitychange is the correct event
+//  FIX: blur/focus replaced — blur fires when clicking inside the
+//       iframe too, causing false positives. visibilitychange only
+//       fires on actual tab/window switches.
 // ─────────────────────────────────────────────────────────────────
 function onVisibilityChange() {
     document.hidden ? handleLeave() : handleReturn();
 }
 
 function handleLeave() {
-    if (!S.active || S.leaveTime !== null || S.isWarningVisible) return;
+    if (!S.active || !S.armed || S.leaveTime !== null || S.isWarningVisible) return;
     S.leaveTime = Date.now();
+
     const limit = S.violations === 0 ? 10 : 5;
     let count = limit;
-    $('countDisp').innerText = count;
-    $('countdownOverlay').style.display = 'flex';
-    S.vTick  = setInterval(() => {
+    document.getElementById('countDisp').innerText = count;
+    show('countdownOverlay');
+
+    S.vTick = setInterval(() => {
         count--;
-        $('countDisp').innerText = Math.max(count, 0);
+        document.getElementById('countDisp').innerText = Math.max(count, 0);
         if (count <= 0) clearInterval(S.vTick);
     }, 1000);
-    S.vTimer = setTimeout(triggerStrike, limit * 1000 + 500);
+
+    S.vTimer    = setTimeout(triggerStrike, limit * 1000 + 500);
+    // Hard lock after 60s regardless (first offence only)
+    if (S.violations === 0) {
+        S.hardTimer = setTimeout(() => lockExam('Extended Absence'), 60000);
+    }
 }
 
 function handleReturn() {
     if (!S.active || S.leaveTime === null) return;
     clearInterval(S.vTick);
     clearTimeout(S.vTimer);
-    S.vTick = S.vTimer = null;
-    $('countdownOverlay').style.display = 'none';
+    clearTimeout(S.hardTimer);
+    S.vTick = S.vTimer = S.hardTimer = null;
+    hide('countdownOverlay');
     S.leaveTime = null;
 }
 
 function triggerStrike() {
     S.violations++;
     handleReturn();
+
     if (S.violations === 1) {
         S.isWarningVisible = true;
-        $('iframeContainer').style.display = 'none';
-        $('statusBar').style.display       = 'none';
-        $('warningOverlay').style.display  = 'flex';
-        $('strikeText').innerText          = '● SECURITY: 1 STRIKE';
-        $('strikeText').style.color        = '#f85149';
+        hide('iframeWrap');
+        hide('statusBar');
+        show('warningOverlay');
+        setHUD('1 STRIKE — FINAL WARNING', 'warn');
         report('strike_1');
     } else {
-        lockExam('Repeated Window Switch');
+        lockExam('Repeated Tab Switch');
     }
 }
 
 function acknowledgeWarning() {
     S.isWarningVisible = false;
-    $('warningOverlay').style.display  = 'none';
-    $('iframeContainer').style.display = 'block';
-    $('statusBar').style.display       = 'block';
+    hide('warningOverlay');
+    show('iframeWrap');
+    show('statusBar');
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -409,58 +668,84 @@ function acknowledgeWarning() {
 // ─────────────────────────────────────────────────────────────────
 function lockExam(reason) {
     S.active = false;
-    $('iframeContainer').style.display  = 'none';
-    $('statusBar').style.display        = 'none';
-    $('warningOverlay').style.display   = 'none';
-    $('countdownOverlay').style.display = 'none';
-    $('overlay').style.display          = 'flex';
-    $('lockReason').innerText = reason;
+    hide('iframeWrap');
+    hide('statusBar');
+    hide('warningOverlay');
+    hide('countdownOverlay');
+    document.getElementById('lockReason').innerText = reason;
+    show('lockedOverlay');
     report('lock', reason);
 }
 
-function unlock() {
-    if (!S.masterKey) return alert('Cannot verify reset key offline. Contact your instructor.');
-    if ($('reKey').value === S.masterKey) {
+function tryUnlock() {
+    if (!S.masterKey) return alert('Cannot verify key offline. Contact your instructor.');
+    if (document.getElementById('reKey').value === S.masterKey) {
         S.active = true; S.violations = 0;
-        $('overlay').style.display         = 'none';
-        $('statusBar').style.display       = 'block';
-        $('iframeContainer').style.display = 'block';
-        $('strikeText').innerText          = '● MONITORING ACTIVE (RESET)';
-        $('strikeText').style.color        = '#238636';
-        $('reKey').value = '';
+        hide('lockedOverlay');
+        show('statusBar');
+        show('iframeWrap');
+        setHUD('MONITORING ACTIVE (RESET)', 'ok');
+        document.getElementById('reKey').value = '';
     } else {
-        alert('Invalid Reset Key. Contact your instructor.');
+        alert('Invalid Reset Key.');
     }
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  Utilities
+//  Connectivity — FIX: heartbeat ping replaced with native events
+//  which are more reliable and don't generate suspicious traffic
 // ─────────────────────────────────────────────────────────────────
-function report(action, detail) {
-    if (!navigator.onLine) return;
-    fetch(`${SCRIPT_URL}?action=${action}&name=${enc($('uName').value)}&detail=${enc(detail||'')}`).catch(()=>{});
-}
-function $(id)  { return document.getElementById(id); }
-function pad(n) { return String(n).padStart(2,'0'); }
-function enc(s) { return encodeURIComponent(s||''); }
-function status(html, type) {
-    const el = $('statusMsg');
+window.addEventListener('offline', () => {
+    document.getElementById('offlineBanner').style.display = 'block';
+    if (S.active) setHUD('OFFLINE MODE', 'warn');
+});
+window.addEventListener('online', () => {
+    document.getElementById('offlineBanner').style.display = 'none';
+    if (S.active) setHUD('PROCTORING ACTIVE', 'ok');
+});
+
+// ─────────────────────────────────────────────────────────────────
+//  Helpers
+// ─────────────────────────────────────────────────────────────────
+function show(id) { document.getElementById(id).style.display = 'flex'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+function pad(n)   { return String(n).padStart(2,'0'); }
+function enc(s)   { return encodeURIComponent(s||''); }
+
+function setStatus(html, type) {
+    const el = document.getElementById('statusMsg');
     el.innerHTML = html;
     el.className = type || '';
 }
 
-// ─────────────────────────────────────────────────────────────────
-//  Connectivity
-// ─────────────────────────────────────────────────────────────────
-window.addEventListener('offline', () => {
-    $('offlineBanner').style.display = 'block';
-    if (S.active) $('strikeText').innerText = '● OFFLINE MODE';
-    $('offlineNote').style.display = 'block';
-});
-window.addEventListener('online', () => {
-    $('offlineBanner').style.display = 'none';
-    if (S.active) $('strikeText').innerText = '● PROCTORING ACTIVE';
-});
+function setHUD(label, state) {
+    const dot = document.getElementById('hudDot');
+    document.getElementById('hudLabel').innerText = label;
+    dot.className = 'hud-dot' + (state === 'warn' ? ' warn' : state === 'dead' ? ' dead' : '');
+}
+
+function report(action, detail) {
+    if (!navigator.onLine) return;
+    // FIX: action param included — server can now route violation logs correctly
+    fetch(
+        `${SCRIPT_URL}?action=${action}` +
+        `&name=${enc(document.getElementById('uName').value)}` +
+        `&reg=${enc(document.getElementById('uReg').value)}` +
+        `&detail=${enc(detail||'')}`
+    ).catch(()=>{});
+}
+
+function offlinePage(name) {
+    return `<html><body style="font-family:sans-serif;display:flex;justify-content:center;
+        align-items:center;height:100vh;background:#f6f8fa;color:#1f2328;text-align:center;padding:40px;">
+        <div>
+            <h2>Offline Mode</h2>
+            <p style="color:#57606a;margin-top:10px;line-height:1.6;">
+                Your exam will load once internet is restored.<br>
+                Student: <b>${name.replace(/</g,'&lt;')}</b>
+            </p>
+        </div></body></html>`;
+}
 </script>
 </body>
 </html>
