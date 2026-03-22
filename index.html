@@ -12,14 +12,14 @@
             height: 100vh; display: flex; flex-direction: column; overflow: hidden;
         }
 
-        /* ── Setup screen ── */
+        /* ── Setup ── */
         #setup { display: flex; justify-content: center; align-items: center; flex: 1; padding: 20px; }
         .box {
             background: #161b22; padding: 28px; border-radius: 12px;
             border: 1px solid #30363d; width: 100%; max-width: 420px; text-align: center;
         }
-        .box h2 { margin-bottom: 6px; font-size: 20px; }
-        .box p.sub { font-size: 12px; color: #8b949e; margin-bottom: 18px; }
+        .box h2 { margin-bottom: 4px; font-size: 20px; }
+        .box .sub { font-size: 12px; color: #8b949e; margin-bottom: 18px; }
         input {
             width: 100%; padding: 12px; margin: 6px 0;
             border-radius: 6px; border: 1px solid #30363d;
@@ -33,24 +33,23 @@
             background: #21262d; color: #c9d1d9; border: 1px solid #30363d;
             border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;
         }
-        #otpBtn:hover { background: #30363d; }
+        #otpBtn:hover:not(:disabled) { background: #30363d; }
         #otpBtn:disabled { opacity: 0.5; cursor: default; }
         .btn {
             background: #238636; color: white; border: none;
             padding: 14px; border-radius: 6px; cursor: pointer;
             font-weight: bold; width: 100%; margin-top: 12px; font-size: 15px;
-            transition: background 0.2s;
         }
-        .btn:hover { background: #2ea043; }
+        .btn:hover:not(:disabled) { background: #2ea043; }
         .btn:disabled { background: #21262d; color: #8b949e; cursor: default; }
         #statusMsg { font-size: 12px; margin-top: 10px; min-height: 18px; color: #8b949e; }
-        #statusMsg.error { color: #f85149; }
+        #statusMsg.error   { color: #f85149; }
         #statusMsg.success { color: #3fb950; }
         #offlineNote { font-size: 11px; margin-top: 8px; color: #8b949e; display: none; }
 
         /* ── Exam frame ── */
-        #iframeContainer { display: none; flex: 1; width: 100%; height: calc(100vh - 48px); background: white; }
-        iframe { width: 100%; height: 100%; border: none; }
+        #iframeContainer { display: none; flex: 1; width: 100%; height: calc(100vh - 48px); }
+        iframe { width: 100%; height: 100%; border: none; background: white; }
 
         /* ── Status bar ── */
         #statusBar {
@@ -61,7 +60,7 @@
         .status-flex { display: flex; justify-content: space-between; align-items: center; }
         #examTimer { font-family: monospace; font-size: 20px; color: #58a6ff; font-weight: bold; }
         .timer-warning { color: #f85149 !important; animation: pulse 1s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
 
         /* ── Overlays ── */
         #countdownOverlay, #warningOverlay, #overlay {
@@ -74,8 +73,8 @@
         #countdownOverlay h2 { font-size: 18px; margin-top: 16px; letter-spacing: 2px; }
         #warningOverlay { background: #bc1c1c; color: white; }
         #warningOverlay h1 { font-size: 28px; }
-        #warningOverlay p { margin-top: 16px; font-size: 16px; line-height: 1.7; }
-        .acknowledge-btn {
+        #warningOverlay p  { margin-top: 16px; font-size: 16px; line-height: 1.7; }
+        .ack-btn {
             background: white; color: #bc1c1c; padding: 14px 42px;
             border-radius: 50px; font-weight: 800; border: none;
             cursor: pointer; margin-top: 28px; font-size: 16px;
@@ -87,6 +86,7 @@
             background: #1a1a1a; padding: 20px; border-radius: 10px;
             width: 100%; max-width: 350px; margin-top: 10px;
         }
+        .unlock-box p { color: #8b949e; font-size: 13px; margin-bottom: 10px; }
 
         /* ── Offline banner ── */
         #offlineBanner {
@@ -94,11 +94,11 @@
             text-align: center; padding: 5px; font-size: 12px; font-weight: bold;
         }
 
-        /* ── Loading spinner ── */
+        /* ── Spinner ── */
         .spinner {
-            display: inline-block; width: 14px; height: 14px;
-            border: 2px solid #ffffff44; border-top-color: #fff;
-            border-radius: 50%; animation: spin 0.7s linear infinite;
+            display: inline-block; width: 13px; height: 13px;
+            border: 2px solid #ffffff33; border-top-color: #fff;
+            border-radius: 50%; animation: spin .7s linear infinite;
             vertical-align: middle; margin-right: 6px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -108,7 +108,7 @@
 
 <div id="offlineBanner">⚠ INTERNET INTERRUPTED — WORK LOCALLY</div>
 
-<!-- ── SETUP SCREEN ── -->
+<!-- ── SETUP ── -->
 <div id="setup">
     <div class="box">
         <h2>Exam Verification</h2>
@@ -116,14 +116,12 @@
 
         <input type="text"  id="uName"  placeholder="Full Name">
         <input type="text"  id="uReg"   placeholder="Registration Number">
-
         <div class="row">
             <input type="email" id="uEmail" placeholder="Gmail address">
-            <button id="otpBtn" onclick="sendOTP()">Get OTP</button>
+            <button id="otpBtn" onclick="sendOTP()" disabled>Get OTP</button>
         </div>
-
         <input type="text" id="otpIn" placeholder="Enter 4-digit OTP"
-               style="display:none; text-align:center; letter-spacing: 6px; font-size: 20px;">
+               style="display:none; text-align:center; letter-spacing:6px; font-size:20px;">
 
         <button id="startBtn" class="btn" onclick="syncAndStart()" disabled>START EXAM</button>
         <p id="statusMsg"></p>
@@ -131,41 +129,44 @@
     </div>
 </div>
 
-<!-- ── COUNTDOWN OVERLAY ── -->
+<!-- ── COUNTDOWN ── -->
 <div id="countdownOverlay">
     <h1 id="countDisp">10</h1>
     <h2>RETURN TO EXAM IMMEDIATELY</h2>
 </div>
 
-<!-- ── WARNING OVERLAY (Strike 1) ── -->
+<!-- ── STRIKE WARNING ── -->
 <div id="warningOverlay">
     <h1>⚠️ STRIKE 1 ISSUED</h1>
-    <p>
-        You exited the exam window.<br><br>
-        <b>FINAL WARNING:</b> One more switch will permanently <b>LOCK</b> your session.
-    </p>
-    <button class="acknowledge-btn" onclick="acknowledgeWarning()">RESUME EXAM</button>
+    <p>You exited the exam window.<br><br>
+       <b>FINAL WARNING:</b> One more switch will permanently <b>LOCK</b> your session.</p>
+    <button class="ack-btn" onclick="acknowledgeWarning()">RESUME EXAM</button>
 </div>
 
-<!-- ── EXAM IFRAME ── -->
+<!-- ── EXAM IFRAME ──
+     src is set to SCRIPT_URL?action=loadForm&token=XXX
+     The raw Google Form URL never appears here or anywhere in this file.
+-->
 <div id="iframeContainer">
-    <iframe id="examFrame" src="" sandbox="allow-scripts allow-forms allow-same-origin allow-popups"></iframe>
+    <iframe id="examFrame" src=""
+            sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-top-navigation-by-user-activation">
+    </iframe>
 </div>
 
 <!-- ── STATUS BAR ── -->
 <div id="statusBar">
     <div class="status-flex">
-        <span id="strikeText" style="color:#238636; font-size:12px;">● PROCTORING ACTIVE</span>
+        <span id="strikeText" style="color:#238636;font-size:12px;">● PROCTORING ACTIVE</span>
         <span id="examTimer">00:00:00</span>
     </div>
 </div>
 
-<!-- ── LOCKED OVERLAY ── -->
+<!-- ── LOCKED ── -->
 <div id="overlay">
     <h1>🔒 SESSION LOCKED</h1>
     <p id="lockReason">Policy Violation.</p>
     <div class="unlock-box">
-        <p style="color:#8b949e; font-size:13px; margin-bottom:10px;">Contact your instructor for the reset key.</p>
+        <p>Contact your instructor for the reset key.</p>
         <input type="password" id="reKey" placeholder="Instructor Reset Key"
                style="background:white; color:black;">
         <button onclick="unlock()" class="btn">UNLOCK SESSION</button>
@@ -173,333 +174,292 @@
 </div>
 
 <script>
-// ─────────────────────────────────────────────
-//  CONFIG — only the Apps Script URL lives here.
-//  The Google Form URL is NEVER in this file.
-// ─────────────────────────────────────────────
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxBF_ec8svDceE6RZ-U-z-1JuBe3dyF0zaGmGTO1WKkGO-FrFkZbQ1_wPqHRm1UZkI8/exec";
-
-// ── State ────────────────────────────────────
-const state = {
-    active:           false,
-    violations:       0,
-    timeLeft:         3600,
-    leaveTime:        null,
-    otp:              null,
-    sessionToken:     null,   // server-issued token after OTP verified
-    masterKey:        null,   // fetched from server, never hardcoded
-    isWarningVisible: false,
-    timerStarted:     false,
-    listenersAttached:false,
-    vTick:            null,
-    vTimer:           null
+// ─────────────────────────────────────────────────────────────────
+//  ONLY the Apps Script deployment URL lives here.
+//  The Google Form URL exists ONLY inside the Apps Script code.
+// ─────────────────────────────────────────────────────────────────
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlpZhWL3ofzTX0YEs-g62hDbVw6Gs0wFmWiw8ZEiHfBm83dG5JY2GCsLG6E2IeFEr9/exec"
+// ── State ─────────────────────────────────────────────────────────
+const S = {
+    active:            false,
+    violations:        0,
+    timeLeft:          3600,
+    leaveTime:         null,
+    masterKey:         null,
+    isWarningVisible:  false,
+    timerStarted:      false,
+    listenersAttached: false,
+    vTick:             null,
+    vTimer:            null
 };
 
-// ── Boot ─────────────────────────────────────
-if (!navigator.onLine) {
-    document.getElementById('offlineNote').style.display = "block";
-}
+// ── Boot ──────────────────────────────────────────────────────────
+if (!navigator.onLine) document.getElementById('offlineNote').style.display = "block";
 
-// Show OTP field only once email is entered
-document.getElementById('uEmail').addEventListener('input', () => {
-    const hasEmail = document.getElementById('uEmail').value.includes('@');
-    document.getElementById('otpBtn').disabled = !hasEmail;
+document.getElementById('uEmail').addEventListener('input', function() {
+    document.getElementById('otpBtn').disabled = !this.value.includes('@');
 });
-document.getElementById('otpBtn').disabled = true;
 
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 //  STEP 1 — Send OTP
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 async function sendOTP() {
-    const email = document.getElementById('uEmail').value.trim();
-    if (!email.includes('@')) return setStatus("Enter a valid Gmail address.", "error");
+    const name  = $('uName').value.trim();
+    const reg   = $('uReg').value.trim();
+    const email = $('uEmail').value.trim();
 
-    const name = document.getElementById('uName').value.trim();
-    if (!name) return setStatus("Enter your full name first.", "error");
+    if (!name)              return status('Enter your full name first.', 'error');
+    if (!reg)               return status('Enter your registration number first.', 'error');
+    if (!email.includes('@')) return status('Enter a valid Gmail address.', 'error');
 
-    const reg = document.getElementById('uReg').value.trim();
-    if (!reg) return setStatus("Enter your registration number first.", "error");
-
-    setStatus('<span class="spinner"></span>Sending OTP…');
-    document.getElementById('otpBtn').disabled = true;
+    $('otpBtn').disabled = true;
+    status('<span class="spinner"></span>Sending OTP…');
 
     try {
         const res  = await fetch(`${SCRIPT_URL}?action=sendOTP&email=${enc(email)}&name=${enc(name)}&reg=${enc(reg)}`);
         const data = await res.json();
 
-        if (data.status === "ok") {
-            // Server confirmed OTP was sent; store server-assigned session ref if provided
-            state.otp = data.otpRef || "SERVER_VERIFIED"; // server may echo an opaque ref
+        if (data.status === 'ok') {
             showOTPField();
-            setStatus("OTP sent! Check your Gmail inbox.", "success");
+            status('OTP sent! Check your Gmail inbox.', 'success');
         } else {
-            // Offline / script unreachable — fall back to backup code
-            state.otp = "OFFLINE";
-            showOTPField();
-            setStatus("Couldn't reach server. Use backup code 0000 if offline.", "error");
+            $('otpBtn').disabled = false;
+            status(data.message || 'Failed to send OTP. Try again.', 'error');
         }
     } catch {
-        state.otp = "OFFLINE";
+        // Server unreachable — allow offline backup code
         showOTPField();
-        setStatus("No connection. Use backup code 0000.", "error");
+        status('Cannot reach server. Use backup code 0000 if offline.', 'error');
     }
 }
 
 function showOTPField() {
-    document.getElementById('otpIn').style.display = "block";
-    document.getElementById('otpIn').focus();
-    document.getElementById('startBtn').disabled = false;
-    // Re-enable resend after 60s
+    $('otpIn').style.display = 'block';
+    $('otpIn').focus();
+    $('startBtn').disabled = false;
+    // Allow resend after 60s
     setTimeout(() => {
-        document.getElementById('otpBtn').disabled = false;
-        document.getElementById('otpBtn').innerText = "Resend";
+        $('otpBtn').disabled = false;
+        $('otpBtn').innerText = 'Resend';
     }, 60000);
 }
 
-// ─────────────────────────────────────────────
-//  STEP 2 — Verify OTP & fetch form URL from server
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+//  STEP 2 — Verify OTP → server returns a one-time token only
+//           The token is then used as the iframe src parameter.
+//           The form URL never touches the browser.
+// ─────────────────────────────────────────────────────────────────
 async function syncAndStart() {
-    const uName = document.getElementById('uName').value.trim();
-    const uReg  = document.getElementById('uReg').value.trim();
-    const email = document.getElementById('uEmail').value.trim();
-    const otp   = document.getElementById('otpIn').value.trim();
+    const name  = $('uName').value.trim();
+    const reg   = $('uReg').value.trim();
+    const email = $('uEmail').value.trim();
+    const otp   = $('otpIn').value.trim();
 
-    if (!uName)  return setStatus("Enter your full name.", "error");
-    if (!uReg)   return setStatus("Enter your registration number.", "error");
-    if (!email.includes('@')) return setStatus("Enter your Gmail address.", "error");
-    if (!otp)    return setStatus("Enter the OTP sent to your email.", "error");
-    if (!state.otp) return setStatus("Click 'Get OTP' first.", "error");
+    if (!name)               return status('Enter your full name.', 'error');
+    if (!reg)                return status('Enter your registration number.', 'error');
+    if (!email.includes('@'))return status('Enter your Gmail address.', 'error');
+    if (!otp)                return status('Enter the OTP sent to your email.', 'error');
 
-    document.getElementById('startBtn').disabled = true;
-    setStatus('<span class="spinner"></span>Verifying…');
-
-    let formURL  = null;
-    let duration = 3600; // default 60 min fallback
+    $('startBtn').disabled = true;
+    status('<span class="spinner"></span>Verifying identity…');
 
     try {
-        // ── SERVER-SIDE OTP VERIFICATION ──────────────────────────────────
-        // The Apps Script checks the OTP and only returns the form URL if valid.
-        // The form URL NEVER appears in this HTML file.
         const res  = await fetch(
             `${SCRIPT_URL}?action=verifyOTP` +
-            `&email=${enc(email)}&otp=${enc(otp)}` +
-            `&name=${enc(uName)}&reg=${enc(uReg)}`
+            `&email=${enc(email)}&otp=${enc(otp)}&name=${enc(name)}&reg=${enc(reg)}`
         );
         const data = await res.json();
 
-        if (data.status === "denied") {
-            document.getElementById('startBtn').disabled = false;
-            return setStatus("❌ Invalid OTP. Access denied.", "error");
+        if (data.status === 'denied') {
+            $('startBtn').disabled = false;
+            return status('❌ Invalid or expired OTP. Access denied.', 'error');
         }
 
-        if (data.status === "ok") {
-            formURL          = data.formUrl;          // revealed only after server verifies OTP
-            duration         = (data.duration || 60) * 60;
-            state.masterKey  = String(data.resetKey); // stored as string always
-            state.sessionToken = data.token || null;  // optional server session token
+        if (data.status === 'ok') {
+            // We receive a short-lived token, NOT the form URL
+            // The iframe loads: SCRIPT_URL?action=loadForm&token=<token>
+            // Apps Script validates the token and streams the form page
+            S.timeLeft  = (data.duration || 60) * 60;
+            S.masterKey = String(data.resetKey);
+
+            const proxyURL = `${SCRIPT_URL}?action=loadForm&token=${enc(data.token)}`;
+            launchExam(proxyURL, name);
         }
-    } catch (e) {
-        // ── OFFLINE FALLBACK ──────────────────────────────────────────────
-        // Only allow if user explicitly used the offline backup OTP "0000"
-        if (otp !== "0000") {
-            document.getElementById('startBtn').disabled = false;
-            return setStatus("Cannot reach server. Use backup code 0000 if offline.", "error");
+    } catch {
+        if (otp === '0000') {
+            // Offline fallback — no form URL available, show holding screen
+            status('Offline mode active.', 'success');
+            launchExam(null, name);
+        } else {
+            $('startBtn').disabled = false;
+            status('Cannot reach server. Use backup code 0000 if offline.', 'error');
         }
-        console.warn("Offline mode — backup OTP accepted.");
-        // In offline mode we cannot fetch the form URL from the server.
-        // Show a holding message; instructor must supply the form URL directly.
-        formURL = null;
     }
-
-    // ── Log login (best-effort, non-blocking) ─────────────────────────────
-    fetch(`${SCRIPT_URL}?action=login&name=${enc(uName)}&reg=${enc(uReg)}&email=${enc(email)}`)
-        .catch(() => {});
-
-    state.timeLeft = duration;
-    launchExam(formURL, uName);
 }
 
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 //  Launch exam UI
-// ─────────────────────────────────────────────
-function launchExam(formURL, uName) {
-    document.getElementById('setup').style.display = 'none';
-    document.getElementById('iframeContainer').style.display = 'block';
-    document.getElementById('statusBar').style.display = 'block';
+// ─────────────────────────────────────────────────────────────────
+function launchExam(proxyURL, name) {
+    $('setup').style.display         = 'none';
+    $('iframeContainer').style.display = 'block';
+    $('statusBar').style.display     = 'block';
 
-    if (formURL) {
-        document.getElementById('examFrame').src = formURL;
+    if (proxyURL) {
+        $('examFrame').src = proxyURL;
     } else {
-        // Offline fallback — show a local placeholder
-        document.getElementById('examFrame').srcdoc = `
-            <html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#f6f8fa;">
-            <h2>Offline Mode</h2>
-            <p>You are working offline. Your exam form will load when connectivity is restored,<br>
-            or your instructor will provide the direct link.</p>
-            <p style="color:#6e7781;font-size:14px;margin-top:20px;">Student: <b>${escHtml(uName)}</b></p>
-            </body></html>`;
+        $('examFrame').srcdoc = offlineScreen(name);
     }
 
-    state.active = true;
+    S.active = true;
 
-    if (!state.timerStarted) {
+    if (!S.timerStarted) {
         setInterval(updateTimer, 1000);
-        state.timerStarted = true;
+        S.timerStarted = true;
     }
-
-    if (!state.listenersAttached) {
+    if (!S.listenersAttached) {
         document.addEventListener('visibilitychange', onVisibilityChange);
-        state.listenersAttached = true;
+        S.listenersAttached = true;
     }
+
+    // Log login (non-blocking)
+    fetch(`${SCRIPT_URL}?action=login&name=${enc($('uName').value)}&reg=${enc($('uReg').value)}`).catch(()=>{});
 }
 
-// ─────────────────────────────────────────────
+function offlineScreen(name) {
+    return `<html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#f6f8fa;">
+        <h2 style="color:#1f2328;">Offline Mode</h2>
+        <p style="color:#57606a;margin-top:12px;">Your exam form will load once connectivity is restored,
+        or your instructor will provide the direct link.</p>
+        <p style="color:#57606a;font-size:14px;margin-top:20px;">Student: <b>${name.replace(/</g,'&lt;')}</b></p>
+    </body></html>`;
+}
+
+// ─────────────────────────────────────────────────────────────────
 //  Timer
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 function updateTimer() {
-    if (!state.active || state.timeLeft <= 0) return;
-    state.timeLeft--;
-    const h = Math.floor(state.timeLeft / 3600);
-    const m = Math.floor((state.timeLeft % 3600) / 60);
-    const s = state.timeLeft % 60;
-    const el = document.getElementById('examTimer');
+    if (!S.active || S.timeLeft <= 0) return;
+    S.timeLeft--;
+    const h = Math.floor(S.timeLeft / 3600);
+    const m = Math.floor((S.timeLeft % 3600) / 60);
+    const s = S.timeLeft % 60;
+    const el = $('examTimer');
     el.innerText = pad(h) + ':' + pad(m) + ':' + pad(s);
-    if (state.timeLeft < 300) el.classList.add('timer-warning');
-    if (state.timeLeft === 0) lockExam("Time Expired");
+    if (S.timeLeft < 300) el.classList.add('timer-warning');
+    if (S.timeLeft === 0) lockExam('Time Expired');
 }
 
-// ─────────────────────────────────────────────
-//  Proctoring — visibility
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+//  Proctoring
+// ─────────────────────────────────────────────────────────────────
 function onVisibilityChange() {
-    if (document.hidden) handleLeave();
-    else                 handleReturn();
+    document.hidden ? handleLeave() : handleReturn();
 }
 
 function handleLeave() {
-    if (!state.active || state.leaveTime !== null || state.isWarningVisible) return;
-    state.leaveTime = Date.now();
-
-    const limit = state.violations === 0 ? 10 : 5;
-    let   count = limit;
-
-    document.getElementById('countDisp').innerText = count;
-    document.getElementById('countdownOverlay').style.display = 'flex';
-
-    state.vTick = setInterval(() => {
+    if (!S.active || S.leaveTime !== null || S.isWarningVisible) return;
+    S.leaveTime = Date.now();
+    const limit = S.violations === 0 ? 10 : 5;
+    let count = limit;
+    $('countDisp').innerText = count;
+    $('countdownOverlay').style.display = 'flex';
+    S.vTick  = setInterval(() => {
         count--;
-        document.getElementById('countDisp').innerText = Math.max(count, 0);
-        if (count <= 0) clearInterval(state.vTick);
+        $('countDisp').innerText = Math.max(count, 0);
+        if (count <= 0) clearInterval(S.vTick);
     }, 1000);
-
-    state.vTimer = setTimeout(triggerStrike, limit * 1000 + 500);
+    S.vTimer = setTimeout(triggerStrike, limit * 1000 + 500);
 }
 
 function handleReturn() {
-    if (!state.active || state.leaveTime === null) return;
-    clearInterval(state.vTick);
-    clearTimeout(state.vTimer);
-    state.vTick  = null;
-    state.vTimer = null;
-    document.getElementById('countdownOverlay').style.display = 'none';
-    state.leaveTime = null;
+    if (!S.active || S.leaveTime === null) return;
+    clearInterval(S.vTick);
+    clearTimeout(S.vTimer);
+    S.vTick = S.vTimer = null;
+    $('countdownOverlay').style.display = 'none';
+    S.leaveTime = null;
 }
 
 function triggerStrike() {
-    state.violations++;
-    handleReturn(); // clears countdown
-
-    if (state.violations === 1) {
-        state.isWarningVisible = true;
-        document.getElementById('iframeContainer').style.display = 'none';
-        document.getElementById('statusBar').style.display      = 'none';
-        document.getElementById('warningOverlay').style.display = 'flex';
-        document.getElementById('strikeText').innerText = "● SECURITY: 1 STRIKE";
-        document.getElementById('strikeText').style.color = "#f85149";
-        // Report strike (best-effort)
-        report("strike_1");
+    S.violations++;
+    handleReturn();
+    if (S.violations === 1) {
+        S.isWarningVisible = true;
+        $('iframeContainer').style.display = 'none';
+        $('statusBar').style.display       = 'none';
+        $('warningOverlay').style.display  = 'flex';
+        $('strikeText').innerText          = '● SECURITY: 1 STRIKE';
+        $('strikeText').style.color        = '#f85149';
+        report('strike_1');
     } else {
-        lockExam("Repeated Window Switch");
+        lockExam('Repeated Window Switch');
     }
 }
 
 function acknowledgeWarning() {
-    state.isWarningVisible = false;
-    document.getElementById('warningOverlay').style.display  = 'none';
-    document.getElementById('iframeContainer').style.display = 'block';
-    document.getElementById('statusBar').style.display       = 'block';
+    S.isWarningVisible = false;
+    $('warningOverlay').style.display  = 'none';
+    $('iframeContainer').style.display = 'block';
+    $('statusBar').style.display       = 'block';
 }
 
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 //  Lock / Unlock
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 function lockExam(reason) {
-    state.active = false;
-    document.getElementById('iframeContainer').style.display = 'none';
-    document.getElementById('statusBar').style.display       = 'none';
-    document.getElementById('warningOverlay').style.display  = 'none';
-    document.getElementById('countdownOverlay').style.display= 'none';
-    document.getElementById('overlay').style.display         = 'flex';
-    document.getElementById('lockReason').innerText = reason;
-    report("lock", reason);
+    S.active = false;
+    $('iframeContainer').style.display  = 'none';
+    $('statusBar').style.display        = 'none';
+    $('warningOverlay').style.display   = 'none';
+    $('countdownOverlay').style.display = 'none';
+    $('overlay').style.display          = 'flex';
+    $('lockReason').innerText = reason;
+    report('lock', reason);
 }
 
 function unlock() {
-    const entered = document.getElementById('reKey').value;
-    if (!state.masterKey) {
-        return alert("Cannot verify reset key offline. Contact your instructor.");
-    }
-    if (entered === state.masterKey) {
-        state.active     = true;
-        state.violations = 0;
-        document.getElementById('overlay').style.display         = 'none';
-        document.getElementById('statusBar').style.display       = 'block';
-        document.getElementById('iframeContainer').style.display = 'block';
-        document.getElementById('strikeText').innerText = "● MONITORING ACTIVE (RESET)";
-        document.getElementById('strikeText').style.color = "#238636";
-        document.getElementById('reKey').value = '';
+    if (!S.masterKey) return alert('Cannot verify reset key offline. Contact your instructor.');
+    if ($('reKey').value === S.masterKey) {
+        S.active = true; S.violations = 0;
+        $('overlay').style.display         = 'none';
+        $('statusBar').style.display       = 'block';
+        $('iframeContainer').style.display = 'block';
+        $('strikeText').innerText          = '● MONITORING ACTIVE (RESET)';
+        $('strikeText').style.color        = '#238636';
+        $('reKey').value = '';
     } else {
-        alert("Invalid Reset Key. Contact your instructor.");
+        alert('Invalid Reset Key. Contact your instructor.');
     }
 }
 
-// ─────────────────────────────────────────────
-//  Helpers
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
+//  Utilities
+// ─────────────────────────────────────────────────────────────────
 function report(action, detail) {
     if (!navigator.onLine) return;
-    const name = enc(document.getElementById('uName').value);
-    const d    = enc(detail || action);
-    fetch(`${SCRIPT_URL}?action=${action}&name=${name}&detail=${d}`).catch(() => {});
+    fetch(`${SCRIPT_URL}?action=${action}&name=${enc($('uName').value)}&detail=${enc(detail||'')}`).catch(()=>{});
 }
-
-function setStatus(html, type) {
-    const el = document.getElementById('statusMsg');
+function $(id)  { return document.getElementById(id); }
+function pad(n) { return String(n).padStart(2,'0'); }
+function enc(s) { return encodeURIComponent(s||''); }
+function status(html, type) {
+    const el = $('statusMsg');
     el.innerHTML = html;
     el.className = type || '';
 }
 
-function pad(n) { return String(n).padStart(2, '0'); }
-function enc(s) { return encodeURIComponent(s || ''); }
-function escHtml(s) {
-    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 //  Connectivity
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 window.addEventListener('offline', () => {
-    document.getElementById('offlineBanner').style.display = "block";
-    document.getElementById('strikeText').innerText = "● OFFLINE MODE";
-    document.getElementById('offlineNote').style.display = "block";
+    $('offlineBanner').style.display = 'block';
+    if (S.active) $('strikeText').innerText = '● OFFLINE MODE';
+    $('offlineNote').style.display = 'block';
 });
-
 window.addEventListener('online', () => {
-    document.getElementById('offlineBanner').style.display = "none";
-    if (state.active) {
-        document.getElementById('strikeText').innerText = "● PROCTORING ACTIVE";
-    }
+    $('offlineBanner').style.display = 'none';
+    if (S.active) $('strikeText').innerText = '● PROCTORING ACTIVE';
 });
 </script>
 </body>
